@@ -45,11 +45,13 @@ What we keep from the reference card is its feel: the follower trails the pointe
 
 **Behavior.** Nova is one character with four states, driven by scroll position:
 
-1. **Entrance.** After the headline reveal, he floats in from the top or from one of the sides (picked at random on each visit), tumbling slightly as he arrives, and settles into his float.
+1. **Entrance.** After the headline reveal he comes from far away in the top-right corner (scale 0) and flies head first, like a flying hero (level, arms tight along his body, legs together and trailing, head up), down to the bottom middle of the banner, **behind the text**. There he pulls up, comes **in front of everything** and front-flips up to the middle of the banner, coming close to the screen at the top of the arc (2.2 times his size) and settling at his normal size, then waves hello. The layer switch is a z-index change on Nova's canvas (1 behind the banner text, which sits at z-2; 40 in front). Tricks, following and wandering start after the wave; clicks do nothing until then. While floating afterwards he drifts very slightly toward and away from the screen (scale within 4%).
 2. **Floating in the banner.** He never leaves the screen while the banner is in view.
    - *Idle (pointer still or away):* he wanders around the banner on a slow, smooth path (noise-driven drift within safe margins that keep him on screen and clear of the menu and the logo band), turning to look around.
    - *Pointer moving:* he gently drifts after the mouse with a soft lag, never snapping to it. His whole body reacts, not just his position: the spine leans toward the pointer, the upper spine (his "head") turns to look at it, he banks with the pointer's speed, the arms and legs trail behind the motion, and the antenna springs and wobbles.
-   - *Idle tricks:* after a few seconds without pointer movement, he occasionally performs a trick, then goes back to floating. Set of tricks: backflip, frontflip, barrel roll, a slow spin, a stretch, a look around, a little wave. One at a time, random order, never the same twice in a row, roughly every 8 to 15 seconds of idle time.
+   - *Tricks:* every few seconds he performs a trick, then goes back to floating, whether the pointer is moving or not. Set of tricks: backflip, frontflip, barrel roll, a slow spin, a stretch, a look around, a little wave. One at a time, random order, never the same twice in a row, the first about 1.5 seconds after he arrives, then a gap of 1.8 to 4 seconds after each one.
+   - *Click:* a click anywhere that is not a link, button or form field makes him play a random trick at once, cutting short the one in progress.
+   - *Beacon:* the antenna tip blinks every 2.4 seconds and sends out a radio wave (two red rings that expand and fade).
    - *Links and buttons:* when the pointer reaches one, he drifts aside so he never covers it.
 3. **Leaving.** As the user scrolls down, he floats up and out of the screen with the scroll (scrubbed, so scrolling back up brings him back in the same way). Once the banner is gone, he is gone.
 4. **Goodbye (bottom of the page).** When the user reaches the bottom, he rises from the bottom middle of the screen, showing only his upper half (visor and chest), looks at the user and follows the mouse with his gaze, and waves goodbye with one arm. Specced and built with the footer (part 08), on this same Nova.
@@ -86,12 +88,13 @@ What we keep from the reference card is its feel: the follower trails the pointe
 | Serif lead, headline | first load, after the page transition reveal (part 11) | Split by lines (lead) and chars (headline), masked; each piece rises from `yPercent: 135` to 0 | `expo.out`, 1s; lines stagger 0.07s; chars stagger 0.0175s; group stagger 0.12s between the lead and the headline |
 | Headline letters | pointer moves anywhere on the page, after the reveal finishes | Each char's weight follows distance to the pointer within a 400px radius: grotesk 700 at rest down to 200 when close; serif 300 at rest up to 800 when close | `quickTo` on the weight, 0.4s `power2.out`; skipped on touch and reduced motion |
 | Link underline | hover | A random squiggle (cycled from 6 variants) draws in 0% to 100%; on leave it draws out from the start | `power2.inOut`, 0.5s both ways |
-| Nova entrance | after the headline reveal, once the model is loaded | Floats in from the top, left or right (random), slight tumble, settles into the float | `move` ease, about 1.8s |
+| Nova entrance | after the headline reveal, once the model is loaded | Flies head first from the top-right corner (scale 0) to the bottom middle behind the text; pulls up, comes in front, front-flips to the middle (up to 2.2x, back to 1x); waves hello | flight 2.1s, flip 1.5s, wave 1.6s; about 5.3s in all |
 | Nova float | always while in the banner | Zero-g bob and sway on the root, arms and legs drifting slightly (procedural, or the `Idle_Float` clip if the designer sends one) | looping |
 | Nova wander | pointer idle or outside the window | Slow noise-driven path around the banner inside safe margins; turns toward the direction he drifts | continuous, slow |
 | Nova follow | pointer moves | Drifts after the pointer with a soft lag (spring, comparable to the reference's 1s `power4` follow); banks with horizontal speed, pitches with vertical speed | damped spring; tilt settles about 66ms after the pointer stops |
 | Nova body | pointer moves | Spine leans toward the pointer; `Spine.02` and `Spine.03` turn to look at it (clamped); arms and legs lag behind the motion; antenna chain springs | per-bone damped springs |
-| Nova tricks | idle for a few seconds | One of: backflip, frontflip, barrel roll, slow spin, stretch, look around, small wave; random, no repeats in a row, every 8 to 15s of idle | each trick about 1.2 to 2s, eased in and out of the float; interrupted smoothly if the pointer moves |
+| Nova tricks | every few seconds, pointer moving or not; at once on a click outside links and controls | One of: backflip, frontflip, barrel roll, slow spin, stretch, look around, small wave; random, no repeats in a row, 1.8 to 4s apart | each trick about 1.2 to 2s, eased in and out of the float; a click cuts the current one short smoothly |
+| Nova beacon | always | Antenna tip flashes, a soft halo pulses and two rings expand and fade | every 2.4s, wave 1.2s |
 | Nova avoid | pointer over a link or button | Drifts aside so the control is never covered | 0.4s |
 | Nova leave | scrolling down past the banner | Floats up and out with the scroll | scrubbed to scroll; reverses when scrolling back up |
 | Nova render | Nova off screen | Frame loop stops | |
@@ -153,7 +156,7 @@ User feedback and what changed:
 - [ ] Nova never covers the link: he moves aside when the pointer reaches it
 - [ ] Nova never leaves the screen while the banner is in view, and never sits on the menu or the logo band
 - [ ] Following feels gentle: no snapping, no jitter, the whole body reacts
-- [ ] Tricks look natural, start and end in the float, and get interrupted gracefully by pointer movement
+- [ ] Tricks look natural, start and end in the float, play while the pointer moves, and a click starts one
 - [ ] Scrolling down floats him out; scrolling back up floats him back in the same way
 - [ ] Nova loads after the text (no effect on LCP); the banner is complete and readable before he arrives
 - [ ] 60fps on a mid-range laptop with the pointer moving; nothing renders while he is off screen

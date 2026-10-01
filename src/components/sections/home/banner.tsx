@@ -8,7 +8,8 @@ import { banner } from "@/content/home";
 export function Banner() {
   return (
     <Section id="banner" className="h-svh min-h-[34rem]">
-      <div className="px-page absolute inset-x-0 top-0 bottom-(--logo-band) flex flex-col items-center justify-center gap-[2rem] pt-[7rem] text-center">
+      {/* z-2: above Nova's canvas while he flies in behind the text (nova-stage.tsx) */}
+      <div className="px-page absolute inset-x-0 top-0 bottom-(--logo-band) z-2 flex flex-col items-center justify-center gap-[2rem] pt-[7rem] text-center">
         <Lead lines={banner.lead} />
         <Heading as="h1" size="xxl" lines={banner.headline} weightHover reveal={{ split: "chars", delay: 0.12 }} />
         <DrawLineLink href={banner.link.href} label={banner.link.label} chip="down" className="text-[1.75rem]" />
