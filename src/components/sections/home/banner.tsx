@@ -40,7 +40,7 @@ export function Banner() {
         </div>
 
         <div className="flex items-end justify-between gap-[1.6rem]">
-          <p className="max-w-[35rem] text-[max(1.83rem,16px)] leading-[1.45] font-normal tracking-[-0.02em] max-md:max-w-[17rem]">
+          <p className="max-w-[35rem] text-[max(1.83rem,16px)] leading-[1.45] font-normal tracking-[-0.02em] text-balance max-md:max-w-[17rem]">
             {intro.plain} <strong className="font-bold">{intro.strong}</strong>
           </p>
           <ScrollCue href={scroll.href} label={scroll.label} className="shrink-0 max-md:size-[6.5rem]" />
