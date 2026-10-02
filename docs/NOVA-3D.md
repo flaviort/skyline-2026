@@ -2,7 +2,7 @@
 
 Notes on the rigged Nova model for the website: banner (part 01), goodbye at the bottom of the page (part 08) and the 404 page. The first section can be forwarded to the 3D designer as is.
 
-File received 2026-10-01: `Astronalt_09_Rig_Website.glb` (Blender 4.2 glTF exporter), kept in `assets/3d/nova/` (gitignored source).
+Files received 2026-10-01: `Astronalt_09_Rig_Website.glb` (Blender 4.2 glTF exporter, exported without modifiers) and later the source `Astronalt_09_Rig_Website.blend`, both in `assets/3d/nova/` (gitignored). The site is built from the `.blend`; the designer list below is now mostly handled by our script.
 
 ## For the 3D designer
 
@@ -60,25 +60,27 @@ three.js strips dots from bone names: `Spine.01` is `Spine01` in code, `Leg.L.00
   - Goodbye (`specs/home/08-footer.md`): at the bottom of the page he rises from the bottom middle, upper half only, looks at the user and the mouse, and waves goodbye.
 - Secondary motion: the antenna bones lag behind and spring back, and the arms and legs drift and trail in zero-g.
 - Without clips, all of this is procedural on the bones. Clips from the designer (`Idle_Float`, `Wave`, the tricks) replace their procedural versions one by one.
-- **Decision (2026-10-01): build with the current file now** and swap in the designer's fixed version when it arrives. Until then:
-  - Items 1 to 4 are patched in code at load time (`src/components/three/nova-rig.ts`): the antenna chain is re-parented to `Spine.03`. The patches only run when they detect the problem, so they do nothing once the fixed file is in.
-  - Item 10 (subdivision): the body, arms, backpack, visor glass and gloves get two levels of Loop subdivision at load, skin weights blended with the same stencils. Open edges stay exactly where they were, so the visor glass, its metal ring and the suit opening keep meeting. The metal ring is not smoothed (a ring that thin shrinks into the suit), so it keeps its polygon outline up close. Skipped for any mesh over 2,500 vertices, so an export with modifiers applied passes through.
-  - Items 1, 2, 3, 5 and 11 (detail weights): every zipper, flag and detail piece, and the backpack itself, copies the weights of the smoothed suit surface it belongs to (the four closest surface vertices, blended by distance), the same as Blender's Data Transfer. A skinned piece belongs to the surface that uses its main bone; anything else goes to the closest surface, except the backpack and what sits on it, which always go with his back. The backpack is rigid: one set of weights for all of it (the average of his back under it), so a head turn swings it without bending it. The visor glass and ring take the weights of the suit opening around them, so the head turns as one piece. The shoulder seams (`Astronault_Body_Arm_Dedail.002` and `.003`) hang from a small helper bone under each upper arm: they turn with the arm and slide along it every frame (`slideSeams`) to stay where the arm, a rigid tube pivoting deep inside the body, comes out of the suit. Weights that are already sound are kept. Before this, rigid pieces followed a single bone while the suit under them blended several, so the zipper and flags sank in and out of the suit, and the backpack, mostly weighted to the antenna's base bone, bent with the antenna and cut into his back.
-  - The zipper and flags are also rested on the smoothed surface: each stretch is lifted or lowered along the suit's normal until its lowest point sits just above the suit (offset averaged over neighbourhoods so the piece keeps its shape). Needed because the subdivision here approximates the designer's, not matches it.
-- Bone directions found in testing, in Nova's own space: raising an arm is +Z for the left and -Z for the right; leaning is Z on `Spine.01`; looking is Y on `Spine.02` and `Spine.03`. Arm raises are capped near horizontal; the cap was there because the waist cords were weighted to the arms and stretched, which the weight patch fixes, so it can be relaxed if the motion needs it.
-  - Item 6 (feet): each foot bone is re-attached to the end of its leg.
-  - Item 7 (right hand): a mirrored copy of the left hand is built at load and bound to the right hand bones. Because the optimized file quantizes vertices (the dequantization lives in the skin's inverse bind matrices), the copy reads the true rest shape through skinning and binds to a fresh skeleton.
+- **Decision (2026-10-01, updated the same day): the model is built from the designer's `.blend`** (`assets/3d/nova/Astronalt_09_Rig_Website.blend`, gitignored) by `scripts/nova/fix.py`, run headless in Blender. The first delivery was a `.glb` exported without its modifiers; until the `.blend` arrived, the site patched it at load time. All of those patches are gone. What the script does:
+  - Keeps only the website rig: `Astronault_Rig.001` and the collections `1.001` and `2.001`. The `.blend` is a full production scene (174 objects: cameras, text, props, an older rig); none of that is exported.
+  - Applies every modifier at the rest pose except the armature: Subdivision Surface (the smoothing), Mirror (the right hand), Solidify and Shrinkwrap (the flags), Mesh Deform (the backpack knob), Bevel (zipper teeth, capped at 2 segments to keep the file light).
+  - Puts every piece in the rig's space and skins it. Vertex-parented flags and the loose zipper get their world placement baked first.
+  - Weights (Data Transfer, nearest face interpolated): zipper, chest and side flags, leg cords and the visor copy the body's; sleeve flags and shoulder pipes copy the arms'. The backpack, its trim, knob and flag share one set of weights, the average of his back under them, spine bones only, so the pack moves as a rigid case. Vertex groups left over from an older rig (`Bone.001` and so on) are dropped and every vertex normalized.
+  - Bones: `Anten_01` hangs from `Spine.03`, `Foot.L` and `Foot.R` from the lower legs; IK constraints removed; only deforming bones exported.
+  - **One suit** (2026-10-01): the arms were separate tubes pushed into the body and pivoting deep inside it, so the sleeve slid through the suit at the shoulder whatever the weights (a per-frame pipe solver in code and anchoring the sleeve root were both tried first). Sleeve flags copy their weights from the finished suit, so they stay on the sleeve where the shoulder weights were evened out. The script now lifts the arms 0.6 rad into a new rest pose (at rest they hang close along his sides, so fusing them there would glue them to his flanks), fuses arms and body with an exact boolean union, rounds the seam into a soft fillet (even triangles, surface relaxed within 1.5 cm, so sleeve and body meet without a crease or shading streaks), blends the weights from half and half on the seam to fully body or fully arm over 5 cm and then evens them out within 7 cm (no abrupt change, so raising the arm never folds the suit), and drops the delivered shoulder pipes. Nothing replaces them (user, 2026-10-01): rings at the seam and backpack straps over the shoulder were both tried and dropped, because a raised sleeve folds over or hides anything near the shoulder.
+- Nothing is patched in code any more: `src/components/three/nova-rig.ts` only finds the bones and poses them. Because the rest pose has the arms raised, the stage subtracts `ARM_REST_LIFT` (0.6, exported from `nova-rig.ts`; keep it equal to `ARM_LIFT` in the script) from its arm angles.
+- Motion choice (user, 2026-10-01): elbows stay nearly straight (a visible elbow bend reads oddly on his tube arms); the wave swings from the hand and shoulder. Knees keep their bend.
+- Bone directions found in testing, in Nova's own space: raising an arm is +Z for the left and -Z for the right; leaning is Z on `Spine.01`; looking is Y on `Spine.02` and `Spine.03`. Arm raises are capped near horizontal.
 
 ## Swapping in a new version
 
-1. Drop the new `.glb` into `assets/3d/nova/` and run the optimize command from the pipeline below, writing over `public/models/nova.glb`.
-2. Bone names must stay the same (`Main`, `Spine.01` to `.03`, `Arm_01.L`, and so on). If the designer renames bones, the bone map at the top of the `Nova` component is the only place to update.
-3. If the file now has clips (`Idle_Float`, `Wave`, the tricks), they replace their procedural versions automatically by name; anything missing keeps the procedural version.
+1. Save the designer's new `.blend` over `assets/3d/nova/Astronalt_09_Rig_Website.blend` and run `npm run model:nova`.
+2. If object, collection or bone names change, update the lists at the top of `scripts/nova/fix.py` and the bone map at the top of `nova-rig.ts`.
+3. If the file gains clips (`Idle_Float`, `Wave`, the tricks), turn on `export_animations` in the script; they replace their procedural versions by name.
 4. Check the banner, the goodbye and the 404 page, then commit the new `nova.glb`.
 
 ## Pipeline
 
-1. Source: `assets/3d/nova/*.glb` (gitignored).
-2. Optimize: `npm run model:nova` (Meshopt compression; join, palette, flatten and simplify are turned off because they merge the loose parts and materials the rig code needs to find by name).
-3. Load with `GLTFLoader` and the Meshopt decoder (React Three Fiber `useGLTF` handles both).
+1. Source: `assets/3d/nova/Astronalt_09_Rig_Website.blend` (gitignored). Needs Blender 4.2 or newer (5.2.2 installed with Homebrew; set `BLENDER` to use another binary).
+2. Build: `npm run model:nova`. Blender runs `scripts/nova/fix.py` and writes `assets/3d/nova/nova-fixed.glb` (about 1.8 MB), then gltf-transform compresses it with Meshopt into `public/models/nova.glb` (about 390 KB, 250 KB gzipped). Join, palette, flatten and simplify are off because they merge the parts and materials the site finds by name.
+3. Load with `GLTFLoader` and the Meshopt decoder.
 4. Poster: render the rest pose to a transparent PNG at the banner's size for the loading and reduced-motion fallback.

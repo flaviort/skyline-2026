@@ -52,8 +52,9 @@ src/
     hooks/                usePointer, useReducedMotion, useFinePointer
 scripts/
   export-wordpress.mjs    one-time export of the old WordPress projects
+  nova/fix.py             builds the website Nova from the designer's .blend (Blender, headless; npm run model:nova)
 assets/
-  3d/nova/                Nova source file from the 3D designer (gitignored; large source files)
+  3d/nova/                Nova .blend from the 3D designer, plus the intermediate export (gitignored; large source files)
 public/
   models/                 optimized .glb models served to the browser
   brand/                  logo wordmark, S mark, arrow

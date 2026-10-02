@@ -25,8 +25,8 @@ The specs for parts 02 and later were written before these; apply them when each
 | Type | `Heading` (bold lines plus accent line, fits its column), `Lead` (two lines, line fit) in `src/components/type/` |
 | Text motion | `useKineticText` (masked reveal plus cursor weight effect on one SplitText split), `useFitText` (shrinks text only when a word or line would not fit) in `src/components/motion/` |
 | UI | `DrawLineLink` (squiggle link, 6 hand-drawn squiggles), `ArrowChip`, `Icon` (legacy SVGs, no icon library), `Section` |
-| Nova | `src/components/three/`: `nova-layer.tsx` (page-level loader, fallbacks), `nova-stage.tsx` (canvas, motion, springs, tricks scheduling), `nova-rig.ts` (bone map, rig patches, root-space posing), `nova-tricks.ts`, `nova-look.ts` (studio lighting and materials) |
-| Model | source `assets/3d/nova/` (gitignored), optimized `public/models/nova.glb` (168 KB) via `npm run model:nova` |
+| Nova | `src/components/three/`: `nova-layer.tsx` (page-level loader, fallbacks), `nova-stage.tsx` (canvas, motion, springs, tricks scheduling), `nova-rig.ts` (bone map, root-space posing), `nova-tricks.ts`, `nova-look.ts` (studio lighting and materials) |
+| Model | source `.blend` in `assets/3d/nova/` (gitignored), built by `scripts/nova/fix.py` into `public/models/nova.glb` (359 KB) via `npm run model:nova` |
 | Foundations | fluid scale and tokens in `src/app/globals.css`, GSAP setup `src/lib/gsap.ts`, Lenis `src/components/providers/smooth-scroll.tsx`, shared pointer `src/lib/pointer.ts` |
 | Lab | `/lab` (dev only): every component on its own, plus Nova in a box with a button per trick |
 
@@ -44,7 +44,7 @@ Below the banner, `src/app/page.tsx` has a temporary placeholder section so the 
 |---|---|---|
 | Approval of part 01 | starting part 02 | user |
 | Client logos, SVG | part 02 | user (ask when part 02 starts) |
-| Fixed Nova file: subdivision applied, detail weights transferred from the suit, antenna and feet parented to bones, backpack leg weights removed, right hand included, optional clips (`Idle_Float`, `Wave`, tricks) | replaces the code patches in `nova-rig.ts` | 3D designer (list in `docs/NOVA-3D.md`) |
+| Nova: optional clips (`Idle_Float`, `Wave`, tricks) | motion | 3D designer |
 | Skyline stickers (astronaut theme, internal jokes) | parts 03, 06, 07 (reference stickers are dev placeholders until then) | user |
 | Hand-lettered client names | part 06 | user (set type stands in) |
 | More office photos | about page | user (current photos plus stock placeholders until then) |
@@ -55,11 +55,11 @@ Below the banner, `src/app/page.tsx` has a temporary placeholder section so the 
 
 ## Known issues and notes
 
-- **Nova entrance needs a rework** (user, 2026-10-01: "looks really bad and not fluid"; parked for later). Current version: flies head first from the top-right corner to the bottom middle behind the text, comes in front, front-flips to the middle, waves. Spec in `docs/specs/home/01-banner.md`; code in the entrance block of `nova-stage.tsx`.
-- **Shoulders**: each arm is a rigid tube pushed into the body, pivoting deep inside it. The seams slide to stay at the junction, but large arm swings still show the tube moving through the suit. A real fix is a shoulder that deforms in the model (designer).
+- **Nova entrance** (reworked 2026-10-01): flies head first toward the viewer from far behind, top middle, straight down behind the text to the bottom middle; levels out, comes in front, backflips to the middle, waves. Earlier feedback that it was not fluid still needs the user's eye on the new version. Spec in `docs/specs/home/01-banner.md`; code in the entrance block of `nova-stage.tsx`.
+- **Shoulders**: arms and body are fused into one suit by `scripts/nova/fix.py` (arms lifted 0.6 rad in the rest pose, seam rounded and weights blended; no shoulder pipes or straps). If the designer changes the arms or body, re-run `npm run model:nova` and check the stretch and wave.
 
 - **Nova on phones** is large and covers part of the lead and headline; planned for part 10 (mobile).
-- **Nova rig** is patched in code at load: antenna and feet re-parented, suit, visor and gloves subdivided (the file came without its Subdivision Surface applied), backpack, zipper, flags, cords and shoulder seams given the weights of the suit they belong to, zipper and flags rested on the smoothed suit, missing right hand mirrored. Each patch only runs when it detects the problem, so a fixed file passes through untouched. Details in `docs/NOVA-3D.md`.
+- **Nova model** is built from the designer's `.blend` by `scripts/nova/fix.py` (`npm run model:nova`, needs Blender). Nothing is patched in code any more; arms and body are fused into one suit by the script. Details in `docs/NOVA-3D.md`.
 - **Render** is close to the old about-page image (`public/images/legacy/nova.png`), including the blue sheen on the suit (its own reflection studio since 2026-10-01); the remaining gap is soft glow (bloom) around the antenna light and visor highlights. Possible with post-processing at a performance cost; only if the user asks.
 - **Verifying motion:** the in-app browser pane throttles animation frames and serves stale screenshots when it is hidden. Reliable captures came from headless Chrome driven by `puppeteer-core` against a production build (`npx next build && npx next start -p 3100`), installed in a scratch folder, never in the project.
 - **Placeholders from the reference** must live only in `public/_ref/` (gitignored) and be listed in the register in `docs/CONTENT.md`. None are in use yet.

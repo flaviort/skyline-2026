@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "model:nova": "gltf-transform optimize assets/3d/nova/Astronalt_09_Rig_Website.glb public/models/nova.glb --compress meshopt --texture-compress false --join false --palette false --flatten false --simplify false"
+    "model:nova": "${BLENDER:-/Applications/Blender.app/Contents/MacOS/Blender} -b assets/3d/nova/Astronalt_09_Rig_Website.blend --python-exit-code 1 --python scripts/nova/fix.py -- assets/3d/nova/nova-fixed.glb && gltf-transform optimize assets/3d/nova/nova-fixed.glb public/models/nova.glb --compress meshopt --texture-compress false --join false --palette false --flatten false --simplify false"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",

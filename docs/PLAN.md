@@ -117,3 +117,8 @@ Reminder for part 02: ask the user for the client logo SVGs when that part start
 - No invented claims: clients, numbers, awards and quotes only from the user or the old site.
 - All copy, comments, docs and commits: English, no em dashes, no emojis, plain human voice.
 - Work on a branch; commit once per approved part.
+- **Check visual fixes before calling them done** (user, 2026-10-01, after a shoulder pipe was reported fixed while the review image still showed the bug). For any visual fix:
+  1. Reproduce the exact case the user reported (same pose, angle and motion) before changing anything.
+  2. After the fix, render that case again and look at the defect itself at full resolution: crop tightly around it and zoom in. Never judge from a downscaled contact sheet.
+  3. Check more than one angle and pose, including the worst case (arms fully up, close to the screen, mid-trick).
+  4. Say "fixed" only when the close-up shows it. Otherwise report what is still wrong, with the image.

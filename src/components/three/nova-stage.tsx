@@ -10,7 +10,7 @@ import { pointer, pointerIsActive, trackPointer } from "@/lib/pointer";
 import { gsap } from "@/lib/gsap";
 import { clamp } from "@/lib/utils";
 import { LIGHTS, createBeacon, createStudioScene, createSuitScene, dressNova } from "./nova-look";
-import { AXIS, captureRest, findBones, patchRig, poseBone, slideSeams } from "./nova-rig";
+import { ARM_REST_LIFT, AXIS, captureRest, findBones, poseBone } from "./nova-rig";
 import { emptyTrickState, nextTrick, playTrick, settleTricks, type TrickName } from "./nova-tricks";
 
 const MODEL_URL = "/models/nova.glb";
@@ -24,6 +24,10 @@ const FIRST_TRICK = 1.5;
 const TRICK_GAP = [1.8, 4] as const;
 /** How close he comes to the screen during the entrance flip, as a scale multiplier */
 const ENTRANCE_CLOSEST = 2.2;
+/** His size at the end of the flight in, as a scale multiplier: small enough to stay under the text */
+const ENTRANCE_FLIGHT_SIZE = 0.55;
+/** How far he is tipped head first toward the viewer while flying in (radians; the head nods back to keep the visor in view) */
+const ENTRANCE_PITCH = 0.95;
 /** Canvas stacking (page mode): behind the banner text (z-2) while he flies in, then over everything */
 const LAYER_BEHIND = "1";
 const LAYER_FRONT = "40";
@@ -127,7 +131,6 @@ function Nova({
   const { model, bones, rest, beacon } = useMemo(() => {
     const model = cloneSkinned(scene);
     const bones = findBones(model);
-    patchRig(model, bones);
     dressNova(model, suitEnvironment);
     return { model, bones, rest: captureRest(bones), beacon: createBeacon(model) };
   }, [scene, suitEnvironment]);
@@ -141,15 +144,16 @@ function Nova({
   const startedAt = useRef<number | null>(null);
   // The entrance: a GSAP timeline drives his place on screen (px), his depth
   // (`zoom`, a scale multiplier: 0 is far away, above 1 is close to the
-  // screen), how much of the flying pose he holds (`fly`), his heading
-  // (`roll`, radians in the screen plane) and whether he is behind the text.
+  // screen), how much of the flying pose he holds (`fly`), how far he is
+  // tipped head first toward the viewer (`pitch`, radians) and whether he is
+  // behind the text.
   const entrance = useRef({
     active: true,
     x: 0,
     y: 0,
     zoom: 0,
     fly: 1,
-    roll: 0,
+    pitch: 0,
     behind: true,
     timeline: null as gsap.core.Timeline | null,
   });
@@ -236,13 +240,9 @@ function Nova({
       pose(key: keyof typeof bones, axis: keyof typeof AXIS, angle: number) {
         if (root.current) poseBone(bones[key], rest, root.current, [[AXIS[axis], angle]]);
       },
-      /** Moves the shoulder seams to match the posed arms */
-      slide() {
-        if (root.current) slideSeams(model, root.current);
-      },
     };
     (window as unknown as { __nova?: typeof debug }).__nova = debug;
-  }, [bones, rest, model]);
+  }, [bones, rest]);
 
   useFrame((state, rawDelta) => {
     const group = root.current;
@@ -282,24 +282,24 @@ function Nova({
       );
     };
 
-    // Entrance: from far away in the top-right corner he flies head first,
-    // arms tight to his body, down to the bottom middle, behind the text.
-    // There he comes over everything and front-flips up to the middle of the
-    // banner, coming close to the screen on the way, then waves hello.
+    // Entrance: from far behind, top middle, he flies head first toward the
+    // viewer (pitched so his head leads, face tipped up), arms tight to his
+    // body, down to the bottom middle, behind the text. There he levels out,
+    // comes over everything and backflips up to the middle of the banner,
+    // coming close to the screen on the way, then waves hello.
     // Tricks, following and wandering start once he is done.
     const e = entrance.current;
     if (startedAt.current === null) {
       startedAt.current = time + enterDelay;
       m.wander = Math.random() * 100;
-      const start = new THREE.Vector2(w - novaW * 0.3, insetTop + novaH * 0.15);
-      const low = new THREE.Vector2(w * 0.5, bounds.bottom);
+      // Straight down the middle: from far away at the top middle, small and
+      // behind the text, to the empty band under it (the logo band).
+      const low = new THREE.Vector2(w * 0.5, h - insetBottom * 0.55);
+      const start = new THREE.Vector2(w * 0.5, insetTop + novaH * 0.1);
       const middle = new THREE.Vector2(w * 0.5, (bounds.top + bounds.bottom) / 2);
-      // Heading: his head points along the flight, eased toward level like a
-      // flying hero rather than a straight dive. Screen y points down.
-      const heading = Math.atan2(-(low.x - start.x), -(low.y - start.y)) * 0.8;
       const clock = trickClock.current;
       clock.playing = true;
-      Object.assign(e, { x: start.x, y: start.y, zoom: 0, fly: 1, roll: heading, behind: true });
+      Object.assign(e, { x: start.x, y: start.y, zoom: 0, fly: 1, pitch: ENTRANCE_PITCH, behind: true });
       e.timeline = gsap
         .timeline({
           delay: enterDelay,
@@ -314,16 +314,16 @@ function Nova({
         })
         // Fly in behind the text, growing from a speck, slowing as he arrives.
         .to(e, { x: low.x, y: low.y, duration: 2.1, ease: "power2.out" }, 0)
-        .to(e, { zoom: 1.15, duration: 2.1, ease: "power1.in" }, 0)
+        .to(e, { zoom: ENTRANCE_FLIGHT_SIZE, duration: 2.1, ease: "power1.in" }, 0)
         // Pull up: level out and come in front of everything.
         .set(e, { behind: false }, 1.95)
-        .to(e, { roll: 0, fly: 0, duration: 0.45, ease: "power2.inOut" }, 1.85)
-        // Front flip up to the middle, close to the screen at the top of the arc.
+        .to(e, { pitch: 0, fly: 0, duration: 0.45, ease: "power2.inOut" }, 1.85)
+        // Backflip up to the middle, close to the screen at the top of the arc.
         .to(e, { x: middle.x, duration: 1.5, ease: "power1.inOut" }, 2.1)
         .to(e, { y: middle.y, duration: 1.5, ease: "power2.out" }, 2.1)
         .to(e, { zoom: ENTRANCE_CLOSEST, duration: 0.75, ease: "sine.out" }, 2.1)
         .to(e, { zoom: 1, duration: 0.75, ease: "sine.inOut" }, 2.85)
-        .to(s, { flip: 1, duration: 1.5, ease: "power2.inOut" }, 2.1)
+        .to(s, { flip: -1, duration: 1.5, ease: "power2.inOut" }, 2.1)
         .to(s, { tuck: 1, duration: 0.5, ease: "power2.out", yoyo: true, repeat: 1, repeatDelay: 0.3 }, 2.15)
         .set(s, { flip: 0 }, 3.6)
         // Hello.
@@ -467,9 +467,9 @@ function Nova({
     // A slow sweep turns him far enough to show his side now and then.
     const turn = wobble(time * 0.4, 2) * 0.3 + wobble(time * 0.13, 23) * 0.75;
     group.rotation.set(
-      m.pitch + s.flip * TURN + wobble(time * 0.5, 1) * 0.15 * drift,
+      m.pitch + (e.active ? e.pitch : 0) + s.flip * TURN + wobble(time * 0.5, 1) * 0.15 * drift,
       m.yaw + s.spin * TURN + turn * drift,
-      m.bank + m.tumble + (e.active ? e.roll : 0) + s.roll * TURN + wobble(time * 0.6, 3) * 0.2 * drift + m.scroll * 0.5,
+      m.bank + m.tumble + s.roll * TURN + wobble(time * 0.6, 3) * 0.2 * drift + m.scroll * 0.5,
     );
     group.updateMatrixWorld();
 
@@ -505,7 +505,7 @@ function Nova({
     // Spine.02: the visor and the backpack span both upper spine bones, and
     // turning them by different amounts shears the glass and bends the pack.
     const look = spring("look", clamp(m.lookX * 0.7 + s.look * 0.8 + roam, -1, 1) * 0.6 + wobble(time * 0.6, 15) * 0.06, 12, 0.5);
-    const nod = spring("nod", m.lookY * 0.2 - breath * 0.02 + wobble(time * 0.5, 6) * 0.07 - whipY * 0.1 - fly * 0.3, 14, 0.5);
+    const nod = spring("nod", m.lookY * 0.2 - breath * 0.02 + wobble(time * 0.5, 6) * 0.07 - whipY * 0.1 - fly * 0.5, 14, 0.5);
     const tilt = spring("tilt", -look * 0.15 + wobble(time * 0.45, 16) * 0.05 - whipX * 0.1, 12, 0.45);
     poseBone(b.spine2, rest, group, [[AXIS.y, look * 0.9], [AXIS.x, nod * 0.85], [AXIS.z, tilt * 0.85]]);
     poseBone(b.spine3, rest, group, [[AXIS.y, look * 0.1], [AXIS.x, nod * 0.15], [AXIS.z, tilt * 0.15]]);
@@ -514,20 +514,21 @@ function Nova({
     // Raises stop near horizontal: higher, the shoulders fold into the body.
     const raise = (amount: number) => clamp(amount, -0.38, 1.45);
     const stroke = Math.sin(time * 1.2);
-    const wave = s.wave * Math.sin(time * 9) * 0.5;
+    // The wave swings mostly from the hand: a bent elbow reads oddly on his tube arms.
+    const wave = s.wave * Math.sin(time * 9) * 0.22;
     const armLz = spring("armLz", raise(0.22 + wobble(time * 0.8, 7) * 0.2 * idle + dragY * 0.6 + whipY * 0.5 + s.armL * 1.3 - tuck * 0.1 - fly * 0.6) + dragX * (1 - fly) + whipX * (1 - fly), 22, 0.35);
     const armRz = spring("armRz", -raise(0.22 + wobble(time * 0.8, 8) * 0.2 * idle + dragY * 0.6 + whipY * 0.5 + s.armR * 1.3 - tuck * 0.1 - fly * 0.6) + dragX * (1 - fly) + whipX * (1 - fly), 22, 0.35);
     const armLx = spring("armLx", stroke * 0.2 * idle + wobble(time * 0.7, 9) * 0.1 - tuck * 0.25, 20, 0.4);
     const armRx = spring("armRx", -stroke * 0.2 * idle + wobble(time * 0.7, 10) * 0.1 - tuck * 0.25, 20, 0.4);
-    poseBone(b.armL1, rest, group, [[AXIS.z, armLz], [AXIS.x, armLx]]);
-    poseBone(b.armR1, rest, group, [[AXIS.z, armRz], [AXIS.x, armRx]]);
-    const elbowL = spring("elbowL", 0.4 + wobble(time, 11) * 0.25 * idle + tuck * 0.4 + Math.max(0, stroke) * 0.15 * idle - fly * 0.3, 30, 0.35);
-    const elbowR = spring("elbowR", 0.4 + wobble(time, 12) * 0.25 * idle + tuck * 0.4 + Math.max(0, -stroke) * 0.15 * idle + s.wave * 0.6 - fly * 0.3, 30, 0.35);
+    poseBone(b.armL1, rest, group, [[AXIS.z, armLz - ARM_REST_LIFT], [AXIS.x, armLx]]);
+    poseBone(b.armR1, rest, group, [[AXIS.z, armRz + ARM_REST_LIFT], [AXIS.x, armRx]]);
+    // Elbows stay nearly straight: he reads as a soft toy, not a jointed figure.
+    const elbowL = spring("elbowL", 0.1 + wobble(time, 11) * 0.06 * idle + tuck * 0.15 + Math.max(0, stroke) * 0.04 * idle - fly * 0.1, 30, 0.35);
+    const elbowR = spring("elbowR", 0.1 + wobble(time, 12) * 0.06 * idle + tuck * 0.15 + Math.max(0, -stroke) * 0.04 * idle + s.wave * 0.2 - fly * 0.1, 30, 0.35);
     poseBone(b.armL2, rest, group, [[AXIS.z, elbowL]]);
     poseBone(b.armR2, rest, group, [[AXIS.z, -(elbowR + wave)]]);
     poseBone(b.handL, rest, group, [[AXIS.z, spring("handL", wobble(time * 1.2, 13) * 0.35 + whipX * 0.4, 40, 0.3)]]);
-    poseBone(b.handR, rest, group, [[AXIS.z, spring("handR", wobble(time * 1.2, 14) * 0.35 + whipX * 0.4, 40, 0.3)]]);
-    slideSeams(model, group);
+    poseBone(b.handR, rest, group, [[AXIS.z, spring("handR", wobble(time * 1.2, 14) * 0.35 + whipX * 0.4 - s.wave * Math.sin(time * 9) * 0.6, 40, 0.3)]]);
 
     // Legs: an alternating swim kick with knees, drifting apart, trailing the
     // motion; tucked in during flips.
