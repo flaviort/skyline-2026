@@ -34,6 +34,15 @@ Below the banner, `src/app/page.tsx` has a temporary placeholder section so the 
 
 ## Next steps
 
+**Banner direction F built** (2026-10-02, in review; copy waiting for approval in `docs/CONTENT.md`). Spec: the direction F section of `docs/specs/home/01-banner.md`. Exploration notes: concepts in the design canvas https://claude.ai/artifact/HWArLmV2VEn9UWqzeW8LYx (round 1: A Mission Control, B Earthrise, C Mission Patch, D Launch Sequence; round 2: E and F combine A and D, plus E on mobile). User direction so far:
+- **F is the closest** (user, 2026-10-02): "We launch / brands" with the blinking caret and word list, the readout bar, the "Nova / EVA-01, Orbit stable" tag, the ripple Scroll button. The orbit ellipse around Nova is removed for now.
+- Keep the live 3D Nova as built; follow the old site's layout (left-aligned two-tier headline, hero object right, bottom row with copy and a round Scroll button).
+- Keep from A: the readout bar (Dallas coordinates, Dallas time, "Signal acquired") and the "Nova / EVA-01, Orbit stable" label. No aim ring around Nova (alternatives in E and F).
+- Scroll button with a ripple like Nova's antenna beacon.
+- **No outlined text anywhere** (a no-go).
+- **Stars from the old site, kept and lighter:** the old version is 1,000 separate 3D meshes (`../skyline-2023/assets/js/functions.js`, around line 356 and 639): the cloud turns slowly all the time, and scrolling pushes it up 500 units over three viewports with `scrub: 3`, so the faster you scroll the faster the stars move, and they ease to a stop. The new version keeps that exact behavior (constant slow drift, scroll speed adds smoothed motion, eased stop) on one particle system (one draw call), paused when off screen.
+
+
 0. **Part 09, menu, built and in review** (pulled forward by the user on 2026-10-02; part 01 stays in review, the user will come back to the banner). Logo `S.` in white with a difference blend (inverts over light areas), black link box and black Contact button (user's choice), reference cursors as placeholders, mobile panel under 768px. Files: `src/components/layout/{menu,nav-pill,mobile-menu}.tsx`, `src/components/ui/{pill-button,logo-mark}.tsx`, `src/content/site.ts`, cursor and `.pill-button` styles in `globals.css`.
 
 
@@ -58,7 +67,7 @@ Below the banner, `src/app/page.tsx` has a temporary placeholder section so the 
 
 ## Known issues and notes
 
-- **Nova entrance** (reworked 2026-10-01): flies head first toward the viewer from far behind, top middle, straight down behind the text to the bottom middle; levels out, comes in front, backflips to the middle, waves. Earlier feedback that it was not fluid still needs the user's eye on the new version. Spec in `docs/specs/home/01-banner.md`; code in the entrance block of `nova-stage.tsx`.
+- **Nova entrance** (reworked 2026-10-01): flies head first toward the viewer from just outside the top-left corner, diagonally behind the text to the bottom middle; levels out, comes in front, backflips to the middle, waves. Earlier feedback that it was not fluid still needs the user's eye on the new version. Spec in `docs/specs/home/01-banner.md`; code in the entrance block of `nova-stage.tsx`.
 - **Shoulders**: arms and body are fused into one suit by `scripts/nova/fix.py` (arms lifted 0.6 rad in the rest pose, seam rounded and weights blended; no shoulder pipes or straps). If the designer changes the arms or body, re-run `npm run model:nova` and check the stretch and wave.
 
 - **Nova on phones** is large and covers part of the lead and headline; planned for part 10 (mobile).

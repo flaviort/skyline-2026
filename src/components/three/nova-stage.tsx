@@ -1,6 +1,6 @@
 "use client";
 
-import { Component, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Component, Suspense, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
@@ -67,6 +67,10 @@ export type NovaStageProps = {
   follow?: boolean;
   /** Seconds before the entrance starts */
   enterDelay?: number;
+  /** Horizontal band Nova keeps to, as fractions of the width (the banner keeps him right of the headline) */
+  region?: [number, number];
+  /** A label that follows Nova (the banner's "Nova / EVA-01" tag); shown once he has arrived */
+  tag?: RefObject<HTMLElement | null>;
 };
 
 type Motion = {
@@ -119,6 +123,8 @@ function Nova({
   height,
   follow = true,
   enterDelay = 0,
+  region = [0, 1],
+  tag,
 }: NovaStageProps) {
   const { scene } = useLoader(GLTFLoader, MODEL_URL, withMeshopt);
   const root = useRef<THREE.Group>(null);
@@ -148,7 +154,25 @@ function Nova({
     };
   }, [scene, suitEnvironment]);
 
+  // Prepare his materials on the graphics card while he is still hidden, so
+  // the first frame that shows him is not a slow one.
+  const camera = useThree((state) => state.camera);
+  const stageScene = useThree((state) => state.scene);
+  useEffect(() => {
+    const group = root.current;
+    if (!group) return;
+    const wasVisible = group.visible;
+    group.visible = true;
+    gl.compile(stageScene, camera);
+    group.visible = wasVisible;
+  }, [gl, stageScene, camera, model]);
+
   const tricks = useRef(emptyTrickState());
+  // Our own handle on the tag element, so the frame loop can move it.
+  const tagElement = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    tagElement.current = tag?.current ?? null;
+  }, [tag]);
   // Links and buttons on screen, in canvas px, refreshed a few times a second.
   const obstacles = useRef({ rects: [] as DOMRect[], checkedAt: -1 });
   // Tricks run on their own clock, whether or not the pointer moves. `run`
@@ -277,8 +301,8 @@ function Nova({
 
     // Margins cover his arm span and the turn sweep, so no limb leaves the screen.
     const bounds = {
-      left: novaW * 0.85,
-      right: w - novaW * 0.85,
+      left: Math.max(novaW * 0.85, w * region[0]),
+      right: Math.max(Math.max(novaW * 0.85, w * region[0]), Math.min(w - novaW * 0.85, w * region[1])),
       top: insetTop + novaH * 0.55,
       bottom: Math.max(insetTop + novaH * 0.6, h - insetBottom - novaH * 0.5),
     };
@@ -295,7 +319,7 @@ function Nova({
       );
     };
 
-    // Entrance: from far behind, top middle, he flies head first toward the
+    // Entrance: from far behind, top left, he flies head first toward the
     // viewer (pitched so his head leads, face tipped up), arms tight to his
     // body, down to the bottom middle, behind the text. There he levels out,
     // comes over everything and backflips up to the middle of the banner,
@@ -305,17 +329,21 @@ function Nova({
     if (startedAt.current === null) {
       startedAt.current = time + enterDelay;
       m.wander = Math.random() * 100;
-      // Straight down the middle: from far away at the top middle, small and
-      // behind the text, to the empty band under it (the logo band).
+      // From just outside the top-left corner (so he flies in across the
+      // edge rather than appearing on screen), small and behind the text,
+      // diagonally down to the bottom middle.
       const low = new THREE.Vector2(w * 0.5, h - insetBottom * 0.55);
-      const start = new THREE.Vector2(w * 0.5, insetTop + novaH * 0.1);
-      const middle = new THREE.Vector2(w * 0.5, (bounds.top + bounds.bottom) / 2);
+      const start = new THREE.Vector2(-novaW * 0.35, -novaH * 0.2);
+      // He lands in the middle of his band (the whole width unless a region is set).
+      const middle = new THREE.Vector2((bounds.left + bounds.right) / 2, (bounds.top + bounds.bottom) / 2);
       const clock = trickClock.current;
       clock.playing = true;
       Object.assign(e, { x: start.x, y: start.y, zoom: 0, fly: 1, pitch: ENTRANCE_PITCH, behind: true });
+      // Paused: the frame loop steps it by each frame's (capped) delta, so a
+      // slow frame never skips it ahead and he can never pop in mid-growth.
       e.timeline = gsap
         .timeline({
-          delay: enterDelay,
+          paused: true,
           onComplete: () => {
             e.active = false;
             m.entered = true;
@@ -326,8 +354,12 @@ function Nova({
           },
         })
         // Fly in behind the text, growing from a speck, slowing as he arrives.
-        .to(e, { x: low.x, y: low.y, duration: 2.1, ease: "power2.out" }, 0)
-        .to(e, { zoom: ENTRANCE_FLIGHT_SIZE, duration: 2.1, ease: "power1.in" }, 0)
+        // He emerges from a point in the corner (no pop), quickly reaches a small
+        // but visible size, and crosses at an even pace so the diagonal reads,
+        // growing steadily as he comes closer.
+        .to(e, { x: low.x, y: low.y, duration: 2.1, ease: "sine.inOut" }, 0)
+        .to(e, { zoom: 0.12, duration: 0.45, ease: "power2.out" }, 0)
+        .to(e, { zoom: ENTRANCE_FLIGHT_SIZE, duration: 1.65, ease: "sine.in" }, 0.45)
         // Pull up: level out and come in front of everything.
         .set(e, { behind: false }, 1.95)
         .to(e, { pitch: 0, fly: 0, duration: 0.45, ease: "power2.inOut" }, 1.85)
@@ -354,6 +386,7 @@ function Nova({
       return;
     }
     group.visible = true;
+    if (e.active && e.timeline) e.timeline.time(e.timeline.time() + dt);
 
     // Pointer in canvas space.
     const px = pointer.x - rect.left;
@@ -470,6 +503,17 @@ function Nova({
     const drawY = lifted - m.scroll * (lifted + novaH * 1.2);
 
     group.position.set((drawX - w / 2) * unit, -(drawY - h / 2) * unit, 0);
+
+    // The tag rides beside his shoulder, once he has arrived and until he leaves.
+    const label = tagElement.current;
+    if (label) {
+      // Beside his right shoulder, or his left one when the right edge is too close.
+      const right = drawX + novaW * 0.42;
+      const x = right + label.offsetWidth + 12 <= w ? right : drawX - novaW * 0.42 - label.offsetWidth;
+      label.style.transform = `translate3d(${x}px, ${drawY - novaH * 0.32}px, 0)`;
+      const shown = !e.active && m.scroll < 0.12 ? "1" : "0";
+      if (label.dataset.shown !== shown) label.dataset.shown = shown;
+    }
     group.userData.baseScale = (novaH * unit) / MODEL_HEIGHT;
     // Depth: the entrance zoom, and a slight drift toward and away from the screen.
     const depth = e.active ? e.zoom : 1 + wobble(time * 0.3, 24) * 0.04;

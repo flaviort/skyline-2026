@@ -6,10 +6,13 @@ The reference opens most sections with a two-line sentence above the headline (a
 
 ## Copy deck, in build order
 
-**1. Banner**
-- Lead: Strategy, brands and websites / made in Dallas, TX
-- Headline: WE GROW / BRANDS / *ASTRONOMICALLY*
-- Link: Discover more
+**1. Banner** (direction F, 2026-10-02)
+- Headline, **new, waiting for approval:** "We launch" + a swapping word: brands / startups / websites / campaigns. Screen readers get "We launch brands, startups, websites and campaigns." Each word is a fact from `docs/PRODUCT.md` (launches brands, helps startups, Web Development, Digital Marketing).
+- Intro (legacy site copy): Born in Dallas, **we're an agency that thinks outside the box.**
+- Under the headline (facts): 32.7767° N / 96.7970° W · Dallas, TX · Local time (live, Central)
+- Nova's tag: Nova / EVA-01 · Orbit stable
+- Button: Scroll
+- Retired with direction F: the lead "Strategy, brands and websites / made in Dallas, TX", the headline WE GROW / BRANDS / ASTRONOMICALLY and the "Discover more" link.
 
 **2. Logos**
 - No copy. Accessible label: "Brands we've worked with".

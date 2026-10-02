@@ -1,9 +1,27 @@
 # Part 01: Banner
 
 Status: review
-Approved by / date: spec approved by the user, 2026-10-01
+Approved by / date: spec approved by the user, 2026-10-01; direction F chosen 2026-10-02, built, in review
 
 The first viewport: serif lead, the big type stack, a "Discover more" link, and a 3D Nova who lives on the screen: he floats in, wanders around, follows the mouse, does the odd trick, and floats away when you scroll. He replaces the reference's cursor-following media card (decision D14). His goodbye at the bottom of the page is built with the footer (part 08), on the same Nova. The logo marquee on the bottom edge is part 02.
+
+## Direction F (2026-10-02, supersedes the layout below)
+
+Explored in the design canvas https://claude.ai/artifact/HWArLmV2VEn9UWqzeW8LYx (round 2, board F) and built the same day at the user's request. The old site's layout (left-aligned two-tier headline, hero object on the right, bottom row) with a NASA feel. The sections below describe the first version (centered stack); Nova's motion, entrance, tricks and wave still apply.
+
+| Element | Position (1440x900, 1rem = 12px) | Style / behavior |
+|---|---|---|
+| Ground | full banner | translucent navy glow (`--color-space`) at 76% 42% over the ink body and the fixed stars |
+| Stars | **fixed behind the whole site** (root layout), not just the banner | `Starfield`: the old site's cloud with its numbers (1,000 stars, 500 on phones, shell 90 to 1,090 units, slow turn 0.09 rad/s, scroll lifts the cloud 500 units per three screen heights with a ~3s lag, so faster scroll means faster stars, and they ease to a stop). The lift wraps around, so it keeps reacting down the whole page. Dark sections are transparent over it; light sections paint their own ground. One 2D canvas; pauses in background tabs; one still frame with reduced motion |
+| Headline line | left, vertically centered | "We launch", 8.7rem, light (300). No outlined text anywhere (user rule) |
+| Swapping word | under it | `WordSwap`, 16.7rem, heavy, lowercase: brands, startups, websites, campaigns. Each swap: the outgoing letters lift off upward one after another with a stretch; the incoming ones rise from below, land with a small squash and ignite from weight 150 to 800. First word holds ~5.5s (Nova's entrance), then a new word every ~4s, looping. Pauses off screen; reduced motion keeps the first word. Screen readers read the whole sentence from the `h1` |
+| Location and time | under the word | `Readout`: coordinates, "Dallas, TX", live Central time (ticks every second), in readout type. Phones: "Dallas, TX" and the time. No hairline, no "Signal acquired", no word list (removed 2026-10-02) |
+| Intro | bottom left | legacy line, 1.83rem, "we're an agency..." in bold |
+| Scroll | bottom right, 9.3rem circle | `ScrollCue`: hairline circle, two orange rings ripple out like Nova's antenna beacon; smooth-scrolls to the next section |
+| Nova | right side | the live 3D Nova as built; wanders in 72 to 98% of the width (66 to 98% on tablets, full width above the headline on phones). His entrance now lands in that zone |
+| Nova's tag | beside his shoulder | "Nova / EVA-01 · Orbit stable", orange left edge; follows him every frame, flips to his left near the screen edge, fades in once he has arrived and out as he leaves. No aim ring |
+
+Open: the logo band (part 02) used to sit in the banner's bottom 11rem, which direction F now fills with the intro and Scroll button. Part 02 needs a new place (likely just below the banner).
 
 ## Reference
 
@@ -45,7 +63,7 @@ What we keep from the reference card is its feel: the follower trails the pointe
 
 **Behavior.** Nova is one character with four states, driven by scroll position:
 
-1. **Entrance.** After the headline reveal he comes from far away in the top-right corner (scale 0) and flies head first toward the viewer, as if coming from far behind, straight down the middle from the top, small and behind the text, to the empty band under it (he grows only to 55% on the way), (tipped about 55 degrees so the top of his helmet leads, visor tipped up toward the viewer, arms tight along his body, legs together and trailing), down to the bottom middle of the banner, **behind the text**. There he levels out, comes **in front of everything** and backflips up to the middle of the banner, coming close to the screen at the top of the arc (2.2 times his size) and settling at his normal size, then waves hello. The layer switch is a z-index change on Nova's canvas (1 behind the banner text, which sits at z-2; 40 in front). Tricks, following and wandering start after the wave; clicks do nothing until then. While floating afterwards he drifts very slightly toward and away from the screen (scale within 4%).
+1. **Entrance.** After the headline reveal he flies head first toward the viewer, as if coming from far behind, diagonally from just outside the top-left corner, so he flies in across the edge (grows from nothing to 12% of his size in the first 0.45s, then crosses at an even pace; the timeline is stepped by drawn frames and his materials are prepared on the GPU while he is hidden, so a slow first frame can never make him pop in), behind the text, to the bottom middle (he grows only to 55% on the way), (tipped about 55 degrees so the top of his helmet leads, visor tipped up toward the viewer, arms tight along his body, legs together and trailing), down to the bottom middle of the banner, **behind the text**. There he levels out, comes **in front of everything** and backflips up to the middle of the banner, coming close to the screen at the top of the arc (2.2 times his size) and settling at his normal size, then waves hello. The layer switch is a z-index change on Nova's canvas (1 behind the banner text, which sits at z-2; 40 in front). Tricks, following and wandering start after the wave; clicks do nothing until then. While floating afterwards he drifts very slightly toward and away from the screen (scale within 4%).
 2. **Floating in the banner.** He never leaves the screen while the banner is in view.
    - *Idle (pointer still or away):* he wanders around the banner on a slow, smooth path (noise-driven drift within safe margins that keep him on screen and clear of the menu and the logo band), turning to look around.
    - *Pointer moving:* he gently drifts after the mouse with a soft lag, never snapping to it. His whole body reacts, not just his position: the spine leans toward the pointer, the upper spine (his "head") turns to look at it, he banks with the pointer's speed, the arms and legs trail behind the motion, and the antenna springs and wobbles.
@@ -88,7 +106,7 @@ What we keep from the reference card is its feel: the follower trails the pointe
 | Serif lead, headline | first load, after the page transition reveal (part 11) | Split by lines (lead) and chars (headline), masked; each piece rises from `yPercent: 135` to 0 | `expo.out`, 1s; lines stagger 0.07s; chars stagger 0.0175s; group stagger 0.12s between the lead and the headline |
 | Headline letters | pointer moves anywhere on the page, after the reveal finishes | Each char's weight follows distance to the pointer within a 400px radius: grotesk 700 at rest down to 200 when close; serif 300 at rest up to 800 when close | `quickTo` on the weight, 0.4s `power2.out`; skipped on touch and reduced motion |
 | Link underline | hover | A random squiggle (cycled from 6 variants) draws in 0% to 100%; on leave it draws out from the start | `power2.inOut`, 0.5s both ways |
-| Nova entrance | after the headline reveal, once the model is loaded | Flies head first toward the viewer from far behind, top middle (scale 0), straight down behind the text to the bottom middle (up to 0.55x); levels out, comes in front, backflips to the middle (up to 2.2x, back to 1x); waves hello | flight 2.1s, flip 1.5s, wave 1.6s; about 5.3s in all |
+| Nova entrance | after the headline reveal, once the model is loaded | Flies head first toward the viewer from far behind, just outside the top-left corner (grows from 0 to 0.12x in 0.45s; frame-stepped, GPU warmed up, no pop), diagonally behind the text to the bottom middle (up to 0.55x); levels out, comes in front, backflips to the middle (up to 2.2x, back to 1x); waves hello | flight 2.1s, flip 1.5s, wave 1.6s; about 5.3s in all |
 | Nova float | always while in the banner | Zero-g bob and sway on the root, arms and legs drifting slightly (procedural, or the `Idle_Float` clip if the designer sends one) | looping |
 | Nova wander | pointer idle or outside the window | Slow noise-driven path around the banner inside safe margins; turns toward the direction he drifts | continuous, slow |
 | Nova follow | pointer moves | Drifts after the pointer with a soft lag (spring, comparable to the reference's 1s `power4` follow); banks with horizontal speed, pitches with vertical speed | damped spring; tilt settles about 66ms after the pointer stops |

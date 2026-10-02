@@ -13,7 +13,8 @@ export function Section({ theme = "dark", navTheme, className, ...props }: Secti
     <section
       data-theme={theme}
       data-nav-theme={navTheme ?? (theme === "dark" ? "dark" : undefined)}
-      className={cn("relative bg-(--theme-bg) text-(--theme-text)", className)}
+      // Dark sections are transparent over the body's ink and the fixed stars; light ones paint their own ground.
+      className={cn("relative text-(--theme-text)", theme === "light" && "bg-(--theme-bg)", className)}
       {...props}
     />
   );

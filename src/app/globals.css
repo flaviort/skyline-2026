@@ -23,6 +23,9 @@
   --color-ink: #101010;
   /* The menu's boxes: a step darker than the ink ground (part 09) */
   --color-black: #000000;
+  /* Deep space behind the banner (part 01, direction F): a navy glow fading to near black */
+  --color-space: #151d3d;
+  --color-void: #050609;
   --color-orange: #ff4f00;
   --color-cobalt: #2340ff;
   --color-visor: #ffb800;
@@ -456,4 +459,94 @@
     scale: 1;
   }
 }
+}
+
+/* ------------------------------------------------------------------
+   Banner readout and scroll cue (part 01, direction F)
+   ------------------------------------------------------------------ */
+
+@utility readout {
+  font-size: max(0.92rem, 10px);
+  font-weight: 600;
+  letter-spacing: clamp(0.12em, 1.6vw, 0.24em);
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--theme-mute);
+}
+
+@layer components {
+  .readout__light {
+    animation: readout-blink 2.4s ease-in-out infinite;
+  }
+
+  .scroll-cue {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 9.3rem;
+    height: 9.3rem;
+    border-radius: 50%;
+    border: 1px solid color-mix(in srgb, var(--color-ground) 45%, transparent);
+    text-decoration: none;
+    transition: border-color 0.4s;
+  }
+  .scroll-cue:is(:hover, :focus-visible) {
+    border-color: var(--color-orange);
+  }
+  .scroll-cue__ring {
+    position: absolute;
+    inset: -1px;
+    border-radius: 50%;
+    border: 1px solid var(--color-orange);
+    opacity: 0;
+    animation: scroll-cue-ripple 2.4s ease-out infinite;
+  }
+  .scroll-cue__ring--late {
+    animation-delay: 0.6s;
+  }
+}
+
+@keyframes readout-blink {
+  0%,
+  60%,
+  100% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.2;
+  }
+}
+
+@keyframes scroll-cue-ripple {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .readout__light,
+  .scroll-cue__ring {
+    animation: none;
+  }
+}
+
+@layer components {
+  /* The tag beside Nova (banner): an orange edge, fades in once he has arrived. */
+  .nova-tag {
+    padding-left: 1rem;
+    border-left: 1px solid var(--color-orange);
+    line-height: 1.7;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.6s;
+    will-change: transform;
+  }
+  .nova-tag[data-shown="1"] {
+    opacity: 1;
+  }
 }

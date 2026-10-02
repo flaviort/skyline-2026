@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter_Tight } from "next/font/google";
 import { Menu } from "@/components/layout/menu";
+import { Starfield } from "@/components/motion/starfield";
 import { SmoothScroll } from "@/components/providers/smooth-scroll";
 import "./globals.css";
 
@@ -36,6 +37,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }} />
       </head>
       <body>
+        {/* Fixed stars behind every page; dark sections are transparent over them. */}
+        <Starfield className="fixed inset-0 -z-10" />
         <SmoothScroll>
           <Menu />
           {children}
