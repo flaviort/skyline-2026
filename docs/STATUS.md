@@ -67,6 +67,10 @@ Below the banner, `src/app/page.tsx` has a temporary placeholder section so the 
 
 ## Known issues and notes
 
+- **Nova fallbacks** (2026-10-02): some visitors never saw Nova on the deployed site. Likely causes found: no WebGL 2 or no WebAssembly on their browser, and failures that showed nothing. Every failure now shows the still image with a `[nova]` console line naming the reason (details in `docs/NOVA-3D.md`). Ask anyone who still sees no Nova for their browser and OS and that console line.
+- **Placeholder cursors are development only:** they live in the gitignored `public/_ref/`, so they 404'd in production. They now load only in development (`src/components/providers/dev-cursors.tsx`); production uses system cursors until Skyline's own are drawn.
+- **Expected 404s in production:** the menu prefetches /about, /work, /services and /contact, which are not built yet.
+
 - **Nova entrance** (reworked 2026-10-01): flies head first toward the viewer from just outside the top-left corner, diagonally behind the text to the bottom middle; levels out, comes in front, backflips to the middle, waves. Earlier feedback that it was not fluid still needs the user's eye on the new version. Spec in `docs/specs/home/01-banner.md`; code in the entrance block of `nova-stage.tsx`.
 - **Shoulders**: arms and body are fused into one suit by `scripts/nova/fix.py` (arms lifted 0.6 rad in the rest pose, seam rounded and weights blended; no shoulder pipes or straps). If the designer changes the arms or body, re-run `npm run model:nova` and check the stretch and wave.
 

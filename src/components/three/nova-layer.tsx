@@ -59,12 +59,25 @@ function subscribeResize(onChange: () => void) {
   return () => window.removeEventListener("resize", onChange);
 }
 
-function hasWebGL() {
+/** How long Nova may take to appear before the still image takes his place, in ms */
+const SHOW_TIMEOUT = 12000;
+
+/**
+ * What the 3D Nova needs, or why he cannot run here. three.js needs WebGL 2
+ * (WebGL 1 is gone since r163), and the compressed model needs WebAssembly
+ * to unpack (off in Edge's enhanced security mode, iOS Lockdown Mode and some
+ * managed browsers).
+ */
+function missingSupport(): string | null {
+  if (typeof WebAssembly !== "object") return "WebAssembly is not available";
   try {
     const canvas = document.createElement("canvas");
-    return Boolean(canvas.getContext("webgl2") || canvas.getContext("webgl"));
+    const context = canvas.getContext("webgl2");
+    if (!context) return "WebGL 2 is not available";
+    context.getExtension("WEBGL_lose_context")?.loseContext();
+    return null;
   } catch {
-    return false;
+    return "WebGL 2 is not available";
   }
 }
 
@@ -72,21 +85,35 @@ function hasWebGL() {
  * Nova on the page: a fixed 3D layer that floats in after the headline,
  * wanders, follows the pointer and leaves on scroll (spec: part 01).
  * Loads after the page is ready and the browser is idle, so it never delays
- * the text. Reduced motion and missing WebGL get the still pose instead.
+ * the text. Reduced motion, missing support, a failed scene or a model that
+ * does not show up within SHOW_TIMEOUT all get the still pose instead.
  */
 export function NovaLayer({ scrollOutSelector = "#banner" }: NovaLayerProps) {
   const reducedMotion = useReducedMotion();
   const finePointer = useFinePointer();
   const metrics = useSyncExternalStore(subscribeResize, metricsSnapshot, () => null);
-  const [status, setStatus] = useState<"waiting" | "ready" | "no-webgl">("waiting");
+  const [status, setStatus] = useState<"waiting" | "ready" | "shown" | "still">("waiting");
   const tag = useRef<HTMLDivElement>(null);
+  // Only the first reason is reported (switching to the still image itself
+  // tears down the canvas, which loses its context).
+  const fellBack = useRef(false);
+  const fallBack = (reason: string) => {
+    if (fellBack.current) return;
+    fellBack.current = true;
+    console.info(`[nova] showing the still image: ${reason}`);
+    setStatus("still");
+  };
 
   useEffect(() => {
     let cancelled = false;
     let idle = 0;
     whenPageReady().then(() => {
       if (cancelled) return;
-      const start = () => setStatus(hasWebGL() ? "ready" : "no-webgl");
+      const start = () => {
+        const missing = missingSupport();
+        if (missing) fallBack(missing);
+        else setStatus("ready");
+      };
       if (typeof window.requestIdleCallback === "function") idle = window.requestIdleCallback(start, { timeout: 1200 });
       else idle = window.setTimeout(start, 300);
     });
@@ -97,9 +124,16 @@ export function NovaLayer({ scrollOutSelector = "#banner" }: NovaLayerProps) {
     };
   }, []);
 
+  // A model that never appears (stalled download, silent failure) also falls back.
+  useEffect(() => {
+    if (status !== "ready") return;
+    const timer = window.setTimeout(() => fallBack("the 3D model did not appear in time"), SHOW_TIMEOUT);
+    return () => window.clearTimeout(timer);
+  }, [status]);
+
   if (!metrics) return null;
 
-  if (reducedMotion || status === "no-webgl") {
+  if (reducedMotion || status === "still") {
     return (
       <Image
         src="/images/legacy/nova.png"
@@ -113,7 +147,7 @@ export function NovaLayer({ scrollOutSelector = "#banner" }: NovaLayerProps) {
     );
   }
 
-  if (status !== "ready") return null;
+  if (status === "waiting") return null;
 
   return (
     <>
@@ -127,6 +161,8 @@ export function NovaLayer({ scrollOutSelector = "#banner" }: NovaLayerProps) {
         enterDelay={0.9}
         region={metrics.region}
         tag={tag}
+        onShown={() => setStatus("shown")}
+        onFail={fallBack}
       />
       {/* Telemetry tag that rides beside Nova; the stage moves it every frame. */}
       <div ref={tag} aria-hidden data-shown="0" className="nova-tag readout pointer-events-none fixed top-0 left-0 z-40">

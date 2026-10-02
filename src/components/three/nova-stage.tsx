@@ -71,6 +71,10 @@ export type NovaStageProps = {
   region?: [number, number];
   /** A label that follows Nova (the banner's "Nova / EVA-01" tag); shown once he has arrived */
   tag?: RefObject<HTMLElement | null>;
+  /** Called once the first frame with Nova has been drawn */
+  onShown?: () => void;
+  /** Called if the scene cannot run (no WebGL 2 context, model failed to load, context lost) */
+  onFail?: (reason: string) => void;
 };
 
 type Motion = {
@@ -125,6 +129,7 @@ function Nova({
   enterDelay = 0,
   region = [0, 1],
   tag,
+  onShown,
 }: NovaStageProps) {
   const { scene } = useLoader(GLTFLoader, MODEL_URL, withMeshopt);
   const root = useRef<THREE.Group>(null);
@@ -385,7 +390,10 @@ function Nova({
       group.visible = false;
       return;
     }
-    group.visible = true;
+    if (!group.visible) {
+      group.visible = true;
+      onShown?.();
+    }
     if (e.active && e.timeline) e.timeline.time(e.timeline.time() + dt);
 
     // Pointer in canvas space.
@@ -648,13 +656,14 @@ function Nova({
 }
 
 /** If anything in the 3D scene fails, the page carries on without Nova. */
-class NovaBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+class NovaBoundary extends Component<{ children: ReactNode; onFail?: (reason: string) => void }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() {
     return { failed: true };
   }
   componentDidCatch(error: unknown) {
-    console.error("[nova] scene failed, continuing without Nova:", error);
+    console.error("[nova] scene failed, showing the still image instead:", error);
+    this.props.onFail?.(error instanceof Error ? error.message : String(error));
   }
   render() {
     return this.state.failed ? null : this.props.children;
@@ -682,7 +691,12 @@ export default function NovaStage(props: NovaStageProps) {
   }, [mode, scrollOutSelector]);
 
   return (
+    <NovaBoundary onFail={props.onFail}>
     <Canvas
+      onCreated={({ gl }) => {
+        // A lost context (driver reset, GPU blocklisted mid-session) also falls back.
+        gl.domElement.addEventListener("webglcontextlost", () => props.onFail?.("WebGL context lost"), { once: true });
+      }}
       style={
         mode === "page"
           ? { position: "fixed", inset: 0, zIndex: 40, pointerEvents: "none" }
@@ -695,12 +709,13 @@ export default function NovaStage(props: NovaStageProps) {
       aria-hidden
     >
       <Studio />
-      <NovaBoundary>
+      <NovaBoundary onFail={props.onFail}>
         <Suspense fallback={null}>
           <Nova {...props} />
         </Suspense>
       </NovaBoundary>
     </Canvas>
+    </NovaBoundary>
   );
 }
 

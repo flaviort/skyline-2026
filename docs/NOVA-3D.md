@@ -71,6 +71,18 @@ three.js strips dots from bone names: `Spine.01` is `Spine01` in code, `Leg.L.00
 - Motion choice (user, 2026-10-01): elbows stay nearly straight (a visible elbow bend reads oddly on his tube arms), except in the wave (2026-10-02): upper arm out, elbow bent about 0.6 rad so the forearm stands up, the forearm swinging outward from the elbow (between upright and leaning out, never across the helmet) at about 1.6 swings a second, a little shoulder sway, palm forward (`Hand.R` twisted 1.2 rad around the forearm) with the fingers opened (`Hand_Fingers.R` -1.0 rad on x), the hand trailing the forearm. Turning the palm forward put the thumb root into the cuff, so during a wave the hand slides 30% further out of the sleeve and the thumb moves up the hand and angles outward, at full strength from the start of the wave so it is clear while the wave eases in and out. Knees keep their bend.
 - Bone directions found in testing, in Nova's own space: raising an arm is +Z for the left and -Z for the right; leaning is Z on `Spine.01`; looking is Y on `Spine.02` and `Spine.03`. Arm raises are capped near horizontal.
 
+## When the 3D Nova cannot run
+
+`NovaLayer` shows the still render (`public/images/legacy/nova.png`) instead, and logs one `[nova] showing the still image: <reason>` line in the console, when:
+
+- reduced motion is on;
+- the browser has no **WebGL 2** (three.js dropped WebGL 1 in r163: older Windows GPUs, some Linux setups, old browsers);
+- **WebAssembly** is off, which the Meshopt-compressed model needs to unpack (Edge enhanced security mode, iOS Lockdown Mode, some managed browsers);
+- the scene throws (model fails to load or decode) or the WebGL context is lost;
+- the model has not appeared within 12 seconds (stalled download).
+
+Found 2026-10-02 after friends reported Nova never appearing on the deployed site; before this, the last three cases showed nothing at all.
+
 ## Swapping in a new version
 
 1. Save the designer's new `.blend` over `assets/3d/nova/Astronalt_09_Rig_Website.blend` and run `npm run model:nova`.
