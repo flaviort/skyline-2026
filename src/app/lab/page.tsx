@@ -7,6 +7,9 @@ import { Lead } from "@/components/type/lead";
 import { ArrowChip, type ChipColor } from "@/components/ui/arrow-chip";
 import { DrawLineLink } from "@/components/ui/draw-line-link";
 import { Icon, type Direction } from "@/components/ui/icon";
+import { NavPill } from "@/components/layout/nav-pill";
+import { PillButton } from "@/components/ui/pill-button";
+import { nav } from "@/content/site";
 import { NovaBox } from "./nova-box";
 
 export const metadata: Metadata = { title: "Component lab", robots: { index: false, follow: false } };
@@ -50,6 +53,18 @@ export default function LabPage() {
 
       <Entry name="Lead" note="Two lines above a headline, line reveal">
         <Lead lines={["Strategy, brands and websites", "made in Dallas, TX"]} />
+      </Entry>
+
+      <Entry name="NavPill" note="The menu's black box of links; the current page keeps its squiggle (here: Work)">
+        <div>
+          <NavPill links={nav} current="/work" className="inline-flex" />
+        </div>
+      </Entry>
+
+      <Entry name="PillButton" note="Hover: grows, dots spin, label rolls">
+        <div>
+          <PillButton href="#nova" label="Contact" />
+        </div>
       </Entry>
 
       <Entry name="DrawLineLink" note="Hover: a new squiggle draws each time">

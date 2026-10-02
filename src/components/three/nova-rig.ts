@@ -15,6 +15,8 @@ const BONE_NAMES = {
   armR1: "Arm_01.R",
   armR2: "Arm_02.R",
   handR: "Hand.R",
+  fingersR: "Hand_Fingers.R",
+  thumbR: "Hand_Thumb.R",
   legL: "Leg.L",
   legL2: "Leg.L.001",
   legR: "Leg.R",

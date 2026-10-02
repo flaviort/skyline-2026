@@ -24,6 +24,12 @@ const FIRST_TRICK = 1.5;
 const TRICK_GAP = [1.8, 4] as const;
 /** How close he comes to the screen during the entrance flip, as a scale multiplier */
 const ENTRANCE_CLOSEST = 2.2;
+/** How fast the forearm swings in a wave (radians per second: 10 is about 1.6 swings a second) */
+const WAVE_SPEED = 10;
+/** How far the hand slides out of the sleeve in a wave, as a share of the forearm's length */
+const WAVE_HAND_REACH = 0.3;
+/** How far the thumb moves up the hand during a wave, as a share of the way to the fingers' base */
+const WAVE_THUMB_LIFT = 0.5;
 /** His size at the end of the flight in, as a scale multiplier: small enough to stay under the text */
 const ENTRANCE_FLIGHT_SIZE = 0.55;
 /** How far he is tipped head first toward the viewer while flying in (radians; the head nods back to keep the visor in view) */
@@ -128,11 +134,18 @@ function Nova({
   }, [gl]);
   useEffect(() => () => suitEnvironment.dispose(), [suitEnvironment]);
 
-  const { model, bones, rest, beacon } = useMemo(() => {
+  const { model, bones, rest, handOffset, thumbOffset, beacon } = useMemo(() => {
     const model = cloneSkinned(scene);
     const bones = findBones(model);
     dressNova(model, suitEnvironment);
-    return { model, bones, rest: captureRest(bones), beacon: createBeacon(model) };
+    return {
+      model,
+      bones,
+      rest: captureRest(bones),
+      handOffset: bones.handR.position.clone(),
+      thumbOffset: bones.thumbR.position.clone(),
+      beacon: createBeacon(model),
+    };
   }, [scene, suitEnvironment]);
 
   const tricks = useRef(emptyTrickState());
@@ -514,21 +527,42 @@ function Nova({
     // Raises stop near horizontal: higher, the shoulders fold into the body.
     const raise = (amount: number) => clamp(amount, -0.38, 1.45);
     const stroke = Math.sin(time * 1.2);
-    // The wave swings mostly from the hand: a bent elbow reads oddly on his tube arms.
-    const wave = s.wave * Math.sin(time * 9) * 0.22;
+    // The wave, like a person's: upper arm out, elbow bent so the forearm
+    // stands up clear of the helmet, the forearm swinging side to side from
+    // the elbow with a little sway from the shoulder, palm forward and
+    // fingers open, the hand trailing the forearm. Elbows otherwise stay
+    // nearly straight; only the wave bends one.
+    const swing = Math.sin(time * WAVE_SPEED);
+    const trail = Math.sin(time * WAVE_SPEED - 0.7);
+    // Biased outward: the forearm swings between upright and leaning out,
+    // never across the helmet.
+    const wave = s.wave * swing * 0.28;
     const armLz = spring("armLz", raise(0.22 + wobble(time * 0.8, 7) * 0.2 * idle + dragY * 0.6 + whipY * 0.5 + s.armL * 1.3 - tuck * 0.1 - fly * 0.6) + dragX * (1 - fly) + whipX * (1 - fly), 22, 0.35);
-    const armRz = spring("armRz", -raise(0.22 + wobble(time * 0.8, 8) * 0.2 * idle + dragY * 0.6 + whipY * 0.5 + s.armR * 1.3 - tuck * 0.1 - fly * 0.6) + dragX * (1 - fly) + whipX * (1 - fly), 22, 0.35);
+    const armRz = spring("armRz", -raise(0.22 + wobble(time * 0.8, 8) * 0.2 * idle + dragY * 0.6 + whipY * 0.5 + s.armR * 1.3 - s.wave * 0.15 - tuck * 0.1 - fly * 0.6) - s.wave * swing * 0.06 + dragX * (1 - fly) + whipX * (1 - fly), 22, 0.35);
     const armLx = spring("armLx", stroke * 0.2 * idle + wobble(time * 0.7, 9) * 0.1 - tuck * 0.25, 20, 0.4);
     const armRx = spring("armRx", -stroke * 0.2 * idle + wobble(time * 0.7, 10) * 0.1 - tuck * 0.25, 20, 0.4);
     poseBone(b.armL1, rest, group, [[AXIS.z, armLz - ARM_REST_LIFT], [AXIS.x, armLx]]);
     poseBone(b.armR1, rest, group, [[AXIS.z, armRz + ARM_REST_LIFT], [AXIS.x, armRx]]);
     // Elbows stay nearly straight: he reads as a soft toy, not a jointed figure.
     const elbowL = spring("elbowL", 0.1 + wobble(time, 11) * 0.06 * idle + tuck * 0.15 + Math.max(0, stroke) * 0.04 * idle - fly * 0.1, 30, 0.35);
-    const elbowR = spring("elbowR", 0.1 + wobble(time, 12) * 0.06 * idle + tuck * 0.15 + Math.max(0, -stroke) * 0.04 * idle + s.wave * 0.2 - fly * 0.1, 30, 0.35);
+    const elbowR = spring("elbowR", 0.1 + wobble(time, 12) * 0.06 * idle + tuck * 0.15 + Math.max(0, -stroke) * 0.04 * idle + s.wave * 0.62 - fly * 0.1, 30, 0.35);
     poseBone(b.armL2, rest, group, [[AXIS.z, elbowL]]);
     poseBone(b.armR2, rest, group, [[AXIS.z, -(elbowR + wave)]]);
     poseBone(b.handL, rest, group, [[AXIS.z, spring("handL", wobble(time * 1.2, 13) * 0.35 + whipX * 0.4, 40, 0.3)]]);
-    poseBone(b.handR, rest, group, [[AXIS.z, spring("handR", wobble(time * 1.2, 14) * 0.35 + whipX * 0.4 - s.wave * Math.sin(time * 9) * 0.6, 40, 0.3)]]);
+    poseBone(b.handR, rest, group, [
+      [AXIS.y, s.wave * 1.2],
+      [AXIS.z, spring("handR", wobble(time * 1.2, 14) * 0.35 * (1 - s.wave) + whipX * 0.4 - s.wave * trail * 0.25, 40, 0.3)],
+    ]);
+    poseBone(b.fingersR, rest, group, [[AXIS.x, -s.wave * 1.0]]);
+    // Turning the palm forward swings the thumb root into the cuff: the hand
+    // slides a little out of the sleeve, and the thumb moves up the hand,
+    // clear of the cuff, and angles outward.
+    // Full strength early (the palm turns as the wave starts), so the thumb
+    // is already clear while the wave eases in and out.
+    const clear = Math.min(1, s.wave * 3);
+    b.handR.position.copy(handOffset).multiplyScalar(1 + clear * WAVE_HAND_REACH);
+    b.thumbR.position.copy(thumbOffset).addScaledVector(b.fingersR.position, clear * WAVE_THUMB_LIFT);
+    poseBone(b.thumbR, rest, group, [[AXIS.y, clear * 0.55]]);
 
     // Legs: an alternating swim kick with knees, drifting apart, trailing the
     // motion; tucked in during flips.

@@ -27,14 +27,29 @@ type DrawLineLinkProps = {
   chip?: Direction | false;
   /** Keep the squiggle drawn (current page in menus) */
   persist?: boolean;
+  /** `menu`: the header's small uppercase links, no chip */
+  variant?: "default" | "menu";
   className?: string;
+};
+
+const VARIANT = {
+  default: "inline-flex items-center gap-[0.4em] leading-none tracking-[-0.03em]",
+  menu: "inline-flex items-center text-[max(1rem,12px)] leading-none uppercase font-semibold tracking-[-0.02em]",
 };
 
 /**
  * Text link with a hand-drawn squiggle that draws itself on hover and
  * an arrow chip. Hash links scroll smoothly through Lenis.
  */
-export function DrawLineLink({ href, label, color = "orange", chip = "right", persist = false, className }: DrawLineLinkProps) {
+export function DrawLineLink({
+  href,
+  label,
+  color = "orange",
+  chip = "right",
+  persist = false,
+  variant = "default",
+  className,
+}: DrawLineLinkProps) {
   const root = useRef<HTMLAnchorElement>(null);
   const path = useRef<SVGPathElement>(null);
   const lenis = useLenis();
@@ -88,7 +103,8 @@ export function DrawLineLink({ href, label, color = "orange", chip = "right", pe
       onMouseLeave={erase}
       onFocus={draw}
       onBlur={erase}
-      className={cn("inline-flex items-center gap-[0.4em] leading-none tracking-[-0.03em]", className)}
+      aria-current={variant === "menu" && persist ? "page" : undefined}
+      className={cn(VARIANT[variant], className)}
     >
       <span className="relative pb-[0.15em]">
         {label}
@@ -109,7 +125,7 @@ export function DrawLineLink({ href, label, color = "orange", chip = "right", pe
           />
         </svg>
       </span>
-      {chip && <ArrowChip color={color} direction={chip} />}
+      {chip && variant !== "menu" && <ArrowChip color={color} direction={chip} />}
     </Link>
   );
 }

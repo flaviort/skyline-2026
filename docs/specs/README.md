@@ -18,7 +18,7 @@ Overview and direction contract: [home/README.md](home/README.md)
 | 06 | [Brands we've launched](home/06-brands-launched.md) | spec |
 | 07 | [Contact CTA](home/07-contact-cta.md) | spec |
 | 08 | [Footer](home/08-footer.md) | spec |
-| 09 | [Menu](home/09-menu.md) | spec |
+| 09 | [Menu](home/09-menu.md) | review |
 | 10 | [Mobile](home/10-mobile.md) | spec |
 | 11 | [Page transitions](home/11-page-transitions.md) | spec |
 
@@ -67,7 +67,7 @@ Collected here so the review can answer them in one pass. Each answer is also wr
 | Q16 | Nova's goodbye on every page or only on the homepage? | 08 | **Answered 2026-10-01:** homepage only for now; revisit when internal pages are specced |
 | Q17 | Text on orange (white on orange is 3.3:1) | 01, 03 | **Answered:** anything written on orange uses ink (5.8:1); orange is never used for body text or small labels; selection is orange with ink text. Applied in `globals.css` |
 | Q18 | Secondary colors | 05, 07 | **Answered:** approved as is: cobalt `#2340ff`, visor `#ffb800`, lilac `#c8b6ff` |
-| Q19 | Logo use | 08, 09 | **Answered:** keep both: "S." mark in orange in the menu, wordmark in white in the footer; no refresh |
+| Q19 | Logo use | 08, 09 | **Answered:** keep both: "S." mark in the menu (white with a difference blend since 2026-10-02, first orange), wordmark in white in the footer; no refresh |
 | Q20 | Icon set | 01, 08, 09 | **Answered:** no icon library. Reuse the legacy SVGs (diagonal arrow, arrow down, angle down, close, file, volume, socials) and draw the few missing ones (menu toggle, plus/minus, arrow right/up/back) at one stroke weight, all served through one `Icon` component |
 | Q21 | Stickers and hand lettering | 03, 06, 07 | **Answered:** the user generates Skyline's stickers; until then the reference's stickers are dev-only placeholders in `public/_ref/stickers/` (logged in the register). Client-name lettering for part 06 uses set type as a stand-in until the user's art arrives |
 | Q22 | FAQ and the deck in the navigation | 08, 09 | **Answered:** menu pill stays About, Work, Services; footer navigation is About, Work, Services, FAQ, Contact; the deck lives on the About page only |

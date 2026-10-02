@@ -33,7 +33,7 @@ src/
     sections/home/        Banner, Logos, Agency, RecentProjects, WhatWeDo, Collage,
                           ContactCta (one file per part, in build order)
     type/                 Heading, Lead
-    ui/                   Button, ArrowChip, DrawLineLink, IconButton, Media, Frame, Polaroid,
+    ui/                   Button, ArrowChip, DrawLineLink, PillButton, LogoMark, IconButton, Media, Frame, Polaroid,
                           Sticker, Badge, Marquee
     cards/                ProjectCard, ServiceCard
     blocks/               ProjectBlocks and the 8 case-study block components
@@ -149,10 +149,11 @@ Built or extended part by part; the "First needed" column follows the build orde
 |---|---|---|---|
 | `Button` | `href` or `onClick`, `label`, `icon`, `bg`, `fg`, `chipBg`, `chipFg`, `size`, `external` | 3 Agency | projects, CTA, internal pages, forms |
 | `ArrowChip` | `color`, `direction` (`right`, `down`, `diagonal`), `size` | 1 Banner | inside `Button`, `DrawLineLink`, cards |
-| `DrawLineLink` | `href`, `label`, `color`, `squiggle`, `chip` | 1 Banner | services, part 6, footer, internal pages |
+| `DrawLineLink` | `href`, `label`, `color`, `chip`, `persist`, `variant` (`default`, `menu`: 12px uppercase, no chip, `aria-current` when persisted) | 1 Banner | menu links, services, part 6, footer, internal pages |
 | `Icon` | `name`, `size`, `title` | 1 Banner | every icon on the site |
 | `IconButton` | `icon`, `label`, `onClick` | 8 Footer | scroll to top, menu toggle, slider controls |
-| `PillButton` | `href`, `label`, `grow` | 9 Menu | small pill CTAs |
+| `PillButton` | `href`, `label`, `grow` (px, `[x, y]`) | 9 Menu | the menu's Contact button; any small boxed CTA. Black box, orange dot; styles in `globals.css` (`.pill-button`) |
+| `LogoMark` | `className` (size and color via text color) | 9 Menu | menu, favicon-sized marks, footer if needed |
 | `TransitionLink` | same props as Next `Link` | 11 Transitions | every internal link (inside `Button`, `DrawLineLink`, cards, menu, footer) |
 | `Accordion` | `items`, `closeSiblings` | FAQ page | anywhere a disclosure list is needed |
 | `Form`, `Field` | fields, validation, states | Contact page | |
@@ -204,7 +205,10 @@ Pointer followers share one pointer source: `NovaLayer` moves a 3D Nova around t
 | Component | Key props | First needed | Reused in |
 |---|---|---|---|
 | `Section` | `theme` (`light`, `dark`), `navTheme`, `padding`, `id` | 1 Banner | every section and page |
-| `Menu`, `NavPill`, `MobileMenu`, `Footer`, `ContactCta`, `PageTransition` | content from `src/content/site.ts` | parts 7 to 11 | all pages |
+| `Menu` | none (content from `src/content/site.ts`) | 9 Menu (built) | root layout, every page. Fixed bar, z-50, above Nova |
+| `NavPill` | `links`, `current` | 9 Menu (built) | the menu's black box of links |
+| `MobileMenu` | `links`, `contact`, `current`, `open`, `onClose`, `toggle` | 9 Menu (built) | under 768px; focus kept inside, Escape closes, Lenis paused, covers Nova (z-45) |
+| `Footer`, `ContactCta`, `PageTransition` | content from `src/content/site.ts` | parts 7, 8, 11 | all pages |
 | `ScatterLayout` | `items`, `positions`, `itemSize` | 6 Brands | about page |
 | `StickySteps` | `steps`, `panel` (sticky media, color) | Project page | services page |
 | `SwipeRow` | `snap`, `peek` | 10 Mobile | galleries |

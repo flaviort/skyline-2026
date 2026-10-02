@@ -34,6 +34,9 @@ Below the banner, `src/app/page.tsx` has a temporary placeholder section so the 
 
 ## Next steps
 
+0. **Part 09, menu, built and in review** (pulled forward by the user on 2026-10-02; part 01 stays in review, the user will come back to the banner). Logo `S.` in white with a difference blend (inverts over light areas), black link box and black Contact button (user's choice), reference cursors as placeholders, mobile panel under 768px. Files: `src/components/layout/{menu,nav-pill,mobile-menu}.tsx`, `src/components/ui/{pill-button,logo-mark}.tsx`, `src/content/site.ts`, cursor and `.pill-button` styles in `globals.css`.
+
+
 1. **Get part 01 approved** (user review in the browser at `http://localhost:3000` and `/lab`). On approval: set status `approved` in `docs/PLAN.md`, `docs/specs/README.md` and `docs/specs/home/01-banner.md`, and commit when the user asks.
 2. **Part 02, logos:** re-read `docs/specs/home/02-logos.md`, update it for the dark site, **ask the user for the client logo SVGs**, get the spec approved, then build (the `Marquee` component and the logo band in the banner's bottom 11rem).
 3. Continue the build order in `docs/PLAN.md`: 03 agency, 04 recent projects (runs the one-time WordPress export), 05 what we do (then `/impeccable extract`), 06 brands we've launched, 07 contact CTA, 08 footer (plus Nova's goodbye), 09 menu, 10 mobile, 11 page transitions. Each part: re-read spec, user approval, build in `/lab` first, review, user approval.

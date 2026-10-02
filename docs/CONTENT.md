@@ -95,7 +95,7 @@ Anything taken from extrafazant.nl for development. These files live only in `pu
 
 | File | Used in | Replace with | Status |
 |---|---|---|---|
-| Cursor SVGs (5) | Global cursors (part 09) | Skyline cursors drawn in the same style | Planned |
+| Cursor SVGs (5): `public/_ref/cursors/{default,text,pointer,grab,grabbing}.svg` | Global cursors (part 09) | Skyline cursors drawn in the same style | In use since 2026-10-02 |
 | Sticker SVGs (6) | Contact CTA sticker trail (part 07) | Skyline astronaut stickers and internal jokes | Planned |
 
 Temporary stock photos (not from the reference) live in `public/images/placeholder/` and are listed here too when added: about page office scatter (Q12).

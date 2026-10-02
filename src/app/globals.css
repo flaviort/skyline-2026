@@ -21,6 +21,8 @@
   --color-ground: #f4f4f4;
   --color-paper: #ffffff;
   --color-ink: #101010;
+  /* The menu's boxes: a step darker than the ink ground (part 09) */
+  --color-black: #000000;
   --color-orange: #ff4f00;
   --color-cobalt: #2340ff;
   --color-visor: #ffb800;
@@ -192,6 +194,38 @@
 }
 
 /* ------------------------------------------------------------------
+   Cursors (part 09)
+   Five SVG cursors site-wide, with data-cursor overrides. The files are
+   placeholders from the reference (public/_ref, gitignored, listed in
+   the placeholder register in docs/CONTENT.md) until Skyline's own are
+   drawn. Hotspots match the drawings.
+   ------------------------------------------------------------------ */
+
+@media (pointer: fine) {
+  body,
+  body * {
+    cursor: url("/_ref/cursors/default.svg") 3 0, auto;
+  }
+  body :is(p, h1, h2, h3, h4, h5, h6, input[type="text"], input[type="email"], textarea),
+  body :is([data-cursor="text"], [data-cursor="text"] *) {
+    cursor: url("/_ref/cursors/text.svg") 14 29, text;
+  }
+  body :is(a, a *, button, button *, select, label, input[type="submit"], input[type="checkbox"], input[type="radio"]),
+  body :is([data-cursor="pointer"], [data-cursor="pointer"] *) {
+    cursor: url("/_ref/cursors/pointer.svg") 18 0, pointer;
+  }
+  body :is([data-cursor="grab"], [data-cursor="grab"] *) {
+    cursor: url("/_ref/cursors/grab.svg") 18 6, grab;
+  }
+  body :is([data-cursor="grabbing"], [data-cursor="grabbing"] *) {
+    cursor: url("/_ref/cursors/grabbing.svg") 18 0, grabbing;
+  }
+  body :is([data-cursor="default"], [data-cursor="default"] *) {
+    cursor: url("/_ref/cursors/default.svg") 3 0, auto;
+  }
+}
+
+/* ------------------------------------------------------------------
    Text reveal
    Reveal targets start hidden only when JavaScript runs (the `js` class
    is set by an inline script in the layout) and motion is allowed. The
@@ -318,4 +352,108 @@
 }
 @utility gap-grid {
   gap: var(--grid-gap);
+}
+
+/* ------------------------------------------------------------------
+   PillButton (part 09)
+   Black box, off-white label, an orange dot. Hover (fine pointers, motion
+   allowed): the box grows by a few px (--grow-x/y set by the component),
+   the resting dot spins out while two dots spin in after it, and the label
+   rolls up to its copy.
+   ------------------------------------------------------------------ */
+
+@layer components {
+.pill-button {
+  --pill-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375em;
+  padding: 0.75em 1em 0.75em 0.75em;
+  background-color: var(--color-black);
+  color: var(--color-ground);
+  font-size: max(1rem, 12px);
+  font-weight: 600;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  transition: scale 0.45s var(--pill-ease);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pill-button__dots {
+  position: relative;
+  display: block;
+  width: 0.5em;
+  height: 0.5em;
+}
+
+.pill-button__dot {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background-color: var(--color-orange);
+  transform-origin: calc(-100% - 0.25em) 50%;
+  transition:
+    rotate 0.45s var(--pill-ease),
+    scale 0.45s var(--pill-ease);
+  transition-delay: calc(var(--i, 0) * 0.032s);
+}
+
+/* The two incoming dots wait, folded away. The last one is off-white. */
+.pill-button__dot--in {
+  rotate: 120deg;
+  scale: 0;
+}
+.pill-button__dot--last {
+  background-color: var(--color-ground);
+}
+
+.pill-button__label {
+  position: relative;
+  display: block;
+  overflow: hidden;
+}
+
+.pill-button__text {
+  display: block;
+  transform-origin: left center;
+  transition:
+    translate 0.45s var(--pill-ease),
+    rotate 0.45s var(--pill-ease);
+}
+
+.pill-button__text--next {
+  position: absolute;
+  inset: 0;
+  rotate: 75deg;
+  translate: -0.75em 2em 0;
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .pill-button:is(:hover, :focus-visible) {
+    scale: var(--grow-x, 1) var(--grow-y, 1);
+    transition: scale 0.45s 0.05s var(--pill-ease);
+  }
+  .pill-button:is(:hover, :focus-visible) .pill-button__text {
+    transition-delay: 0.05s;
+  }
+  .pill-button:is(:hover, :focus-visible) .pill-button__text:not(.pill-button__text--next) {
+    rotate: -75deg;
+    translate: -0.75em -2em 0;
+  }
+  .pill-button:is(:hover, :focus-visible) .pill-button__text--next {
+    rotate: 0deg;
+    translate: 0 0 0;
+  }
+  .pill-button:is(:hover, :focus-visible) .pill-button__dot {
+    rotate: -120deg;
+    scale: 0;
+    transition-delay: calc(var(--i, 0) * 0.032s + 0.05s);
+  }
+  .pill-button:is(:hover, :focus-visible) .pill-button__dot--in {
+    rotate: 0deg;
+    scale: 1;
+  }
+}
 }

@@ -49,7 +49,7 @@ Homepage, one part at a time. Status: `todo`, `spec` (written, waiting for appro
 | 6 | [Brands we've launched](specs/home/06-brands-launched.md) | Scattered parallax collage of client work with hand-lettered client names; grows into "Nova was here" | spec |
 | 7 | [Contact CTA](specs/home/07-contact-cta.md) | "Ready for liftoff?" block with stickers trailing the mouse | spec |
 | 8 | [Footer](specs/home/08-footer.md) | Wordmark, navigation, contact, socials, bottom bar, scroll to top, Nova's goodbye wave | spec |
-| 9 | [Menu](specs/home/09-menu.md) | Fixed nav: logo, pill links, Contact button, theme flip over dark bands, custom cursors (D5) | spec |
+| 9 | [Menu](specs/home/09-menu.md) | Fixed nav: logo, pill links, Contact button, custom cursors (D5); pulled ahead of 02 to 08 on 2026-10-02 | review |
 | 10 | [Mobile](specs/home/10-mobile.md) | Full pass of parts 1 to 9 below 992px, mobile menu | spec |
 | 11 | [Page transitions](specs/home/11-page-transitions.md) | First-load intro and route transitions | spec |
 
