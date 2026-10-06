@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter_Tight } from "next/font/google";
+import { LaunchIntro } from "@/components/layout/launch-intro";
 import { Menu } from "@/components/layout/menu";
 import { Starfield } from "@/components/motion/starfield";
 import { DevCursors } from "@/components/providers/dev-cursors";
@@ -14,6 +15,11 @@ const interTight = Inter_Tight({
   subsets: ["latin"],
   style: ["normal", "italic"],
 });
+
+const INTRO_SCRIPT = [
+  "var c=document.documentElement.classList;c.add('js');",
+  "if(!matchMedia('(prefers-reduced-motion: reduce)').matches){c.add('intro','intro-lock');history.scrollRestoration='manual'}",
+].join("");
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://theskylineagency.com"),
@@ -34,8 +40,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={interTight.variable} suppressHydrationWarning>
       <head>
-        {/* Marks JavaScript as available before first paint so reveal targets can start hidden. */}
-        <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }} />
+        {/* Before first paint: marks JavaScript as available so reveal targets can
+            start hidden, and, unless reduced motion is on, shows the launch intro
+            (part 11a) and locks scroll for it. A reload starts at the top. */}
+        <script dangerouslySetInnerHTML={{ __html: INTRO_SCRIPT }} />
       </head>
       <body>
         <DevCursors />
@@ -44,6 +52,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <SmoothScroll>
           <Menu />
           {children}
+          <LaunchIntro />
         </SmoothScroll>
       </body>
     </html>

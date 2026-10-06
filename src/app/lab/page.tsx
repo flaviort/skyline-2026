@@ -10,6 +10,7 @@ import { Icon, type Direction } from "@/components/ui/icon";
 import { NavPill } from "@/components/layout/nav-pill";
 import { PillButton } from "@/components/ui/pill-button";
 import { nav } from "@/content/site";
+import { BlockRevealLab, IntroLab } from "./intro-lab";
 import { NovaBox } from "./nova-box";
 
 export const metadata: Metadata = { title: "Component lab", robots: { index: false, follow: false } };
@@ -106,6 +107,14 @@ export default function LabPage() {
             <p className="heading-s">Light</p>
           </Section>
         </div>
+      </Entry>
+
+      <Entry name="LaunchIntro" note="Part 11a. Fake milestones here; the real one plays on every full page load">
+        <IntroLab />
+      </Entry>
+
+      <Entry name="BlockReveal" note="Line reveal used by the page entrance">
+        <BlockRevealLab />
       </Entry>
 
       <Entry name="Nova" note="Move the mouse in the box; leave it still for idle tricks, or play one">

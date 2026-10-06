@@ -57,6 +57,9 @@ The reference opens most sections with a two-line sentence above the headline (a
 
 **9. Menu:** ABOUT, WORK, SERVICES, CONTACT
 
+**11a. Intro** (launch countdown, 2026-10-05, **new, waiting for approval**)
+- Countdown under the four stage lights: T-minus 04 / 03 / 02 / 01, then Liftoff.
+
 ## Project inventory
 
 Pulled read-only from the old WordPress endpoint on 2026-09-25. Each project also has about 12 content blocks (text, grids, sliders, marquees, full-screen images) for the case pages later.

@@ -11,7 +11,7 @@ Measured at 1440x900. The footer is one dark band (`#101010`, `data-nav-theme="d
 
 | Element | Position / size | Style |
 |---|---|---|
-| CTA area | full content width (page padding 24px each side), 730px tall | dark, the sticker trail lives across this whole area |
+| CTA area | full content width (page padding each side: 24px on the reference, 33px on Skyline since 2026-10-05), 730px tall | dark, the sticker trail lives across this whole area |
 | Heading | centered, 788px wide, 2 lines, about 240px from the top | `heading-xl` 96px (8rem); "OOK IETS IN" grotesk, "BEWEGING BRENGEN?" serif; off-white |
 | Paragraph | centered under the heading, 1 line | `para-m` 15px, off-white |
 | Button | centered, 191 x 36 | pink label and chip, ink text |

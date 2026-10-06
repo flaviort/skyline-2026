@@ -70,6 +70,7 @@ Signature typographic move: a stack of heavy grotesk caps where one line switche
 ## 4. Layout
 
 - 12-column grid with column helpers built as `calc((100vw - page-padding) / 12 * n)`; 8 and 5 column variants for tablet.
+- Page padding: the reference uses 2rem (24px at 1440). Skyline uses more (user, 2026-10-05): 2.75rem on desktop (33px at 1440), 2rem on tablets, 1.5rem on phones (`--page-padding` in `globals.css`; the menu follows it).
 - Sections use `section-padding-128px` style vertical rhythm (8em top and bottom on desktop).
 - Almost every section is centered on the vertical axis of the page. Asymmetry comes from tilted media, not from off-center text.
 

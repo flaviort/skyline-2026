@@ -8,6 +8,7 @@ import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 import { pointer, pointerIsActive, trackPointer } from "@/lib/pointer";
 import { gsap } from "@/lib/gsap";
+import { whenPageReady } from "@/lib/page-ready";
 import { clamp } from "@/lib/utils";
 import { LIGHTS, createBeacon, createStudioScene, createSuitScene, dressNova } from "./nova-look";
 import { ARM_REST_LIFT, AXIS, captureRest, findBones, poseBone } from "./nova-rig";
@@ -65,12 +66,14 @@ export type NovaStageProps = {
   height: number;
   /** Follow the pointer (off on touch screens) */
   follow?: boolean;
-  /** Seconds before the entrance starts */
+  /** Seconds after the page cover is gone before the entrance starts (negative: while it is still leaving) */
   enterDelay?: number;
   /** Horizontal band Nova keeps to, as fractions of the width (the banner keeps him right of the headline) */
   region?: [number, number];
   /** A label that follows Nova (the banner's "Nova / EVA-01" tag); shown once he has arrived */
   tag?: RefObject<HTMLElement | null>;
+  /** Called once the model is loaded and prepared on the graphics card, before he shows */
+  onLoaded?: () => void;
   /** Called once the first frame with Nova has been drawn */
   onShown?: () => void;
   /** Called if the scene cannot run (no WebGL 2 context, model failed to load, context lost) */
@@ -129,6 +132,7 @@ function Nova({
   enterDelay = 0,
   region = [0, 1],
   tag,
+  onLoaded,
   onShown,
 }: NovaStageProps) {
   const { scene } = useLoader(GLTFLoader, MODEL_URL, withMeshopt);
@@ -170,7 +174,23 @@ function Nova({
     group.visible = true;
     gl.compile(stageScene, camera);
     group.visible = wasVisible;
+    onLoaded?.();
+    // Only once the model changes, not when the callback's identity does.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gl, stageScene, camera, model]);
+
+  // The entrance waits for the page cue (part 11): he can load and get ready
+  // under the launch intro, and flies in as the orange leaves.
+  const cue = useRef<number | null>(null);
+  useEffect(() => {
+    let live = true;
+    whenPageReady().then(({ clearIn }) => {
+      if (live) cue.current = clearIn;
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
 
   const tricks = useRef(emptyTrickState());
   // Our own handle on the tag element, so the frame loop can move it.
@@ -331,8 +351,12 @@ function Nova({
     // coming close to the screen on the way, then waves hello.
     // Tricks, following and wandering start once he is done.
     const e = entrance.current;
+    if (startedAt.current === null && cue.current === null) {
+      group.visible = false;
+      return;
+    }
     if (startedAt.current === null) {
-      startedAt.current = time + enterDelay;
+      startedAt.current = time + Math.max(0, (cue.current ?? 0) + enterDelay);
       m.wander = Math.random() * 100;
       // From just outside the top-left corner (so he flies in across the
       // edge rather than appearing on screen), small and behind the text,

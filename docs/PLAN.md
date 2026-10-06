@@ -51,7 +51,7 @@ Homepage, one part at a time. Status: `todo`, `spec` (written, waiting for appro
 | 8 | [Footer](specs/home/08-footer.md) | Wordmark, navigation, contact, socials, bottom bar, scroll to top, Nova's goodbye wave | spec |
 | 9 | [Menu](specs/home/09-menu.md) | Fixed nav: logo, pill links, Contact button, custom cursors (D5); pulled ahead of 02 to 08 on 2026-10-02 | review |
 | 10 | [Mobile](specs/home/10-mobile.md) | Full pass of parts 1 to 9 below 992px, mobile menu | spec |
-| 11 | [Page transitions](specs/home/11-page-transitions.md) | First-load intro and route transitions | spec |
+| 11 | [Page transitions](specs/home/11-page-transitions.md) | 11a launch intro on every full load (pulled forward 2026-10-05); 11b route transitions, on hold | 11a review, 11b spec |
 
 Then `DESIGN.md` is written from the finished homepage and the homepage gets a final review before internal pages start.
 

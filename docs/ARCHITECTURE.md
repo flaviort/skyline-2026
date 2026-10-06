@@ -13,7 +13,7 @@ How the codebase is organized and the rules every change follows. Read with `AGE
 | Smooth scroll | Lenis via `lenis/react` | 1.3 |
 | 3D | three.js 0.186 through React Three Fiber 9 (`useLoader` with three's own `GLTFLoader` and Meshopt decoder; no drei). Models optimized with `gltf-transform` (`npm run model:nova`). Loaded lazily, only on pages that render Nova. | added in part 01 |
 | Fonts | `next/font/google`, self-hosted at build: Inter Tight only (variable weight 100 to 900; D15) | |
-| Page transitions | Custom GSAP overlay (DrawSVG stroke) driven by a `TransitionLink` and the router, replacing the reference's Barba | |
+| Page transitions | Launch intro on every full load (`LaunchIntro`, part 11a). Every entrance plays from one cue, `whenPageReady()` in `src/lib/page-ready.ts`, fired by whichever cover is leaving. Route transitions (11b) are still to be defined and must fire the same cue | |
 
 All GSAP plugins are free since 3.13, so nothing here needs a club license.
 
@@ -139,8 +139,10 @@ Built or extended part by part; the "First needed" column follows the build orde
 | `Lead` | `lines: string[]`, `size` | 1 Banner | agency, projects, CTA |
 | `useKineticText` (hook) | `reveal` (`split`: lines or chars, `delay`, `stagger`), `weight` (sans and serif rest/near weights, `radius`), `targets` | 1 Banner | `Heading`, `Lead`, any text. One SplitText instance drives both the masked reveal and the cursor weight effect (defaults 700/200 for bold lines, 150/700 for the accent line, 400px), so they never fight over the split |
 | `ScrollReveal` | `group`, `stagger`, `start`, `mode` (`lines`, `chars`, `element`) | 3 Agency | all sections |
-| `WordSwap` | `words`, `hold`, `firstHold`, `delay`, `listClassName` | 1 Banner (F) | any cycling word; letters lift off and land, weight ignites 150 to 800; pauses off screen |
+| `WordSwap` | `words`, `hold`, `firstHold`, `delay` (after the cover is gone), `reveal` (`land`, `block`), `listClassName` | 1 Banner (F) | any cycling word; letters lift off and land, weight ignites 150 to 800; pauses off screen |
 | `Starfield` | `className` | 1 Banner (F) | fixed behind every page from the root layout; scroll-reactive stars from the old site on one 2D canvas (constant drift, scroll adds lagged speed, wraps on long pages) |
+| `BlockReveal`, `BlockMarks`, `blockReveal()` | `BlockReveal`: `children`, `className`. `blockReveal(box, text?)` returns a timeline | 11a Intro | banner headline lines, `WordSwap` (`reveal="block"`); any line that should arrive through the bar and orange block |
+| `usePageEntrance` (hook) | `build(timeline)`, `scope`, `offset` (seconds relative to the cover being gone) | 11a Intro | banner, menu, starfield; every page's entrance. Builds paused under the cover, plays on the page cue; layout components only play after the first load |
 | `useFitText` (hook) | `unit` (`word`, `line`), `min` (0.4), `room` (0.96) | 1 Banner | every `Heading` (word fit, on by default) and `Lead` (line fit) |
 | `Lettering` | `svg`, `color`, `position` | 6 Brands | about page, stickers |
 | `Prose` | rich text from content | Legal pages | project text blocks |
@@ -158,7 +160,8 @@ Built or extended part by part; the "First needed" column follows the build orde
 | `ScrollCue` | `href`, `label` | 1 Banner (F) | round Scroll button with orange ripple rings (`.scroll-cue` in `globals.css`) |
 | `Readout` | `coordinates`, `place`, `timeZone` | 1 Banner (F) | location and live time line; the `readout` utility is the type style |
 | `LogoMark` | `className` (size and color via text color) | 9 Menu | menu, favicon-sized marks, footer if needed |
-| `TransitionLink` | same props as Next `Link` | 11 Transitions | every internal link (inside `Button`, `DrawLineLink`, cards, menu, footer) |
+| `LaunchIntro` | `preview` (lab only: `slow`, `onDone`) | 11a Intro | root layout, every full page load. Countdown on real milestones (fonts, load, `holdIntro()` holds, painted frame), 5s cap, clip-path sweep; styles `.launch-intro` in `globals.css` |
+| `TransitionLink` | same props as Next `Link` | 11b Transitions | every internal link (inside `Button`, `DrawLineLink`, cards, menu, footer) |
 | `Accordion` | `items`, `closeSiblings` | FAQ page | anywhere a disclosure list is needed |
 | `Form`, `Field` | fields, validation, states | Contact page | |
 | `CookieBanner`, `CookiePreferences` | content from `site.ts`; `useConsent` hook | Legal / site-wide | every page (root layout) |

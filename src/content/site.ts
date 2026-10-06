@@ -10,3 +10,12 @@ export const nav: NavLink[] = [
 ];
 
 export const contactCta: NavLink = { label: "Contact", href: "/contact" };
+
+// The launch intro on every full page load (part 11a). New copy, waiting for
+// approval in docs/CONTENT.md. Each of the four stage lights lands with its
+// number, counting down from here (04, 03, 02, 01), then the liftoff word shows.
+export const launchIntro = {
+  label: "T-minus",
+  from: 4,
+  liftoff: "Liftoff",
+};

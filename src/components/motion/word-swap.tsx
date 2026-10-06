@@ -3,14 +3,17 @@
 import { useRef, useState } from "react";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { whenPageReady } from "@/lib/page-ready";
+import { BlockMarks, blockReveal } from "./block-reveal";
 import { cn } from "@/lib/utils";
 
 type WordSwapProps = {
   words: string[];
   /** Seconds each word stays before the next one launches */
   hold?: number;
-  /** Seconds after the page is ready before the first word lands */
+  /** Seconds after the page cover is gone before the first word shows (negative: while it is leaving) */
   delay?: number;
+  /** How the first word arrives: rising like the swaps, or through a block reveal (part 11a) */
+  reveal?: "land" | "block";
   /** Seconds the first word stays (the banner waits for Nova's entrance to finish) */
   firstHold?: number;
   className?: string;
@@ -33,7 +36,7 @@ const OFFSET = 170;
  * the first word simply stays. Screen readers get the whole sentence from the
  * heading instead (this is aria-hidden).
  */
-export function WordSwap({ words, hold = 2.6, delay = 0.3, firstHold = hold, className, listClassName }: WordSwapProps) {
+export function WordSwap({ words, hold = 2.6, delay = 0.3, firstHold = hold, reveal = "land", className, listClassName }: WordSwapProps) {
   const root = useRef<HTMLSpanElement>(null);
   const [active, setActive] = useState(0);
 
@@ -110,9 +113,20 @@ export function WordSwap({ words, hold = 2.6, delay = 0.3, firstHold = hold, cla
             land(to, 0.3, running);
           }
 
-          const intro = gsap.timeline({ paused: true, onComplete: countdown });
-          land(0, 0, intro);
-          whenPageReady().then(() => intro.delay(delay).play());
+          let intro: gsap.core.Timeline;
+          if (reveal === "block") {
+            gsap.set(chars(0), { "--wght": HEAVY });
+            intro = blockReveal(layers[0], chars(0)).pause();
+            intro.eventCallback("onComplete", countdown);
+          } else {
+            intro = gsap.timeline({ paused: true, onComplete: countdown });
+            land(0, 0, intro);
+          }
+          let start: gsap.core.Tween | null = null;
+          let cancelled = false;
+          whenPageReady().then(({ clearIn }) => {
+            if (!cancelled) start = gsap.delayedCall(Math.max(0, clearIn + delay), () => void intro.play());
+          });
 
           // Hold still while off screen or in a background tab.
           const pause = (stop: boolean) => {
@@ -128,6 +142,8 @@ export function WordSwap({ words, hold = 2.6, delay = 0.3, firstHold = hold, cla
           document.addEventListener("visibilitychange", onVisibility);
 
           return () => {
+            cancelled = true;
+            start?.kill();
             observer.disconnect();
             document.removeEventListener("visibilitychange", onVisibility);
             next?.kill();
@@ -136,7 +152,7 @@ export function WordSwap({ words, hold = 2.6, delay = 0.3, firstHold = hold, cla
       );
       return () => mm.revert();
     },
-    { scope: root, dependencies: [words.join("|"), hold, delay, firstHold] },
+    { scope: root, dependencies: [words.join("|"), hold, delay, firstHold, reveal] },
   );
 
   return (
@@ -160,6 +176,7 @@ export function WordSwap({ words, hold = 2.6, delay = 0.3, firstHold = hold, cla
                 {char}
               </span>
             ))}
+            {index === 0 && reveal === "block" && <BlockMarks />}
           </span>
         ))}
       </span>

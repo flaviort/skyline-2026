@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
+import { usePageEntrance } from "./use-page-entrance";
 
 type StarfieldProps = {
   className?: string;
@@ -45,10 +46,18 @@ function makeStars(count: number, depth: number): Star[] {
  * its own; scrolling pushes the stars up with a soft lag, so the faster the
  * scroll the faster they move, and they ease to a stop. Dark sections are
  * transparent so it shows through; light sections cover it. Pauses in
- * background tabs; one still frame with reduced motion.
+ * background tabs; one still frame with reduced motion. Fades in with the
+ * first page entrance (it lives in the root layout, so only after the intro).
  */
 export function Starfield({ className }: StarfieldProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  usePageEntrance(
+    (timeline) => {
+      if (canvasRef.current) timeline.fromTo(canvasRef.current, { autoAlpha: 0 }, { autoAlpha: 1, duration: 1.4, ease: "power1.out" });
+    },
+    { offset: -0.5 },
+  );
 
   useEffect(() => {
     const canvas = canvasRef.current;

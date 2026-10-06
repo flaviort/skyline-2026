@@ -61,7 +61,7 @@
   --size-container: clamp(var(--size-container-min), var(--size-container-fluid), var(--size-container-max));
   --size-font: calc(var(--size-container) / (var(--size-container-ideal) / var(--size-unit)));
 
-  --page-padding: 2rem;
+  --page-padding: 2.75rem;
   --grid-gap: 2rem;
   /* Height of the client logo band at the bottom of the banner (part 02) */
   --logo-band: 11rem;
@@ -101,7 +101,7 @@
     --size-container-ideal: 991;
     --size-container-min: 768px;
     --size-container-max: 991px;
-    --page-padding: 1.5rem;
+    --page-padding: 2rem;
     --grid-gap: 1.5rem;
     --heading-xxl: 6.5rem;
     --heading-xl: 5.5rem;
@@ -118,7 +118,7 @@
     --size-container-ideal: 767;
     --size-container-min: 480px;
     --size-container-max: 767px;
-    --page-padding: 1.25rem;
+    --page-padding: 1.5rem;
     --grid-gap: 1.25rem;
     --heading-xxl: 5rem;
     --heading-xl: 4.5rem;
@@ -516,5 +516,101 @@
   }
   .nova-tag[data-shown="1"] {
     opacity: 1;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Launch intro (part 11a)
+   Orange from the first paint: the inline script in the layout sets
+   `intro` (and `intro-lock` for scroll) unless reduced motion is on, so
+   without JavaScript nothing covers the page. The component removes
+   itself after the sweep.
+   ------------------------------------------------------------------ */
+
+html.intro-lock {
+  overflow: hidden;
+}
+
+@layer components {
+  .launch-intro {
+    display: none;
+  }
+  .intro .launch-intro,
+  .launch-intro[data-preview] {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    background-color: var(--color-orange);
+    color: var(--color-ink);
+  }
+  .launch-intro__loader {
+    display: grid;
+    justify-items: start;
+    gap: 0.8rem;
+  }
+  .launch-intro__lights {
+    display: flex;
+    gap: 0.3rem;
+  }
+  .launch-intro__light {
+    width: max(1rem, 11px);
+    height: max(1rem, 11px);
+    background-color: currentColor;
+    visibility: hidden;
+  }
+  .launch-intro__label {
+    position: relative;
+    overflow: hidden;
+    padding-block: 0.2em;
+    font-size: max(0.92rem, 10px);
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    line-height: 1;
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+    white-space: pre;
+  }
+  .launch-intro [data-type] {
+    visibility: hidden;
+  }
+  .launch-intro__mask {
+    position: relative;
+    display: inline-block;
+    overflow: hidden;
+    vertical-align: bottom;
+  }
+  .launch-intro__liftoff {
+    position: absolute;
+    inset: 0.2em 0 auto;
+    visibility: hidden;
+  }
+
+  /* Block reveal (BlockMarks): hidden until the reveal runs. The track runs
+     past the text box on the right, where heavy letters overhang it. */
+  .block-reveal__track {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: -0.1em;
+    pointer-events: none;
+  }
+  .block-reveal__bar,
+  .block-reveal__block {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .block-reveal__bar {
+    background-color: var(--color-ground);
+  }
+  .block-reveal__block {
+    background-color: var(--color-orange);
   }
 }

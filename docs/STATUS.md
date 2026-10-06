@@ -1,6 +1,6 @@
 # Status
 
-Handoff note: where the project stands, what is next, and what is missing. Last updated 2026-10-01. Read this first in a new session, then `docs/PLAN.md`.
+Handoff note: where the project stands, what is next, and what is missing. Last updated 2026-10-05. Read this first in a new session, then `docs/PLAN.md`.
 
 ## Where we are
 
@@ -42,6 +42,8 @@ Below the banner, `src/app/page.tsx` has a temporary placeholder section so the 
 - **No outlined text anywhere** (a no-go).
 - **Stars from the old site, kept and lighter:** the old version is 1,000 separate 3D meshes (`../skyline-2023/assets/js/functions.js`, around line 356 and 639): the cloud turns slowly all the time, and scrolling pushes it up 500 units over three viewports with `scrub: 3`, so the faster you scroll the faster the stars move, and they ease to a stop. The new version keeps that exact behavior (constant slow drift, scroll speed adds smoothed motion, eased stop) on one particle system (one draw call), paused when off screen.
 
+
+0. **Part 11a, launch intro, built and in review** (pulled forward by the user on 2026-10-05; spec approved the same day). Reference: a Codegrid video rebuilding good-fella.com's intro, measured on good-fella.com itself. Every full page load: orange screen from the first paint, "T-minus 04" countdown with four stage lights tied to real loading milestones (5s cap), "Liftoff", a clip-path sweep, then the banner builds (block reveal on both headline lines, menu, readout, stars, Nova). Nova now loads under the cover and holds the countdown until his model is ready. All entrances play from one cue (`whenPageReady()`), so route transitions (11b, on hold) only need to fire it. Files: `src/components/layout/launch-intro.tsx`, `src/components/motion/{block-reveal.tsx,use-page-entrance.ts}`, `src/lib/{page-ready,intro}.ts`. Lab entries with replay and a slow-network mode. Copy (T-minus, Liftoff) waits for approval in `docs/CONTENT.md`.
 
 0. **Part 09, menu, built and in review** (pulled forward by the user on 2026-10-02; part 01 stays in review, the user will come back to the banner). Logo `S.` in white with a difference blend (inverts over light areas), black link box and black Contact button (user's choice), reference cursors as placeholders, mobile panel under 768px. Files: `src/components/layout/{menu,nav-pill,mobile-menu}.tsx`, `src/components/ui/{pill-button,logo-mark}.tsx`, `src/content/site.ts`, cursor and `.pill-button` styles in `globals.css`.
 

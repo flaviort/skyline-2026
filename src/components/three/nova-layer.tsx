@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { banner } from "@/content/home";
 import { useFinePointer, useReducedMotion } from "@/lib/hooks/use-media-query";
-import { whenPageReady } from "@/lib/page-ready";
+import { holdIntro } from "@/lib/intro";
 import { clamp } from "@/lib/utils";
 
 const NovaStage = dynamic(() => import("./nova-stage"), { ssr: false });
@@ -14,10 +14,10 @@ const NovaStage = dynamic(() => import("./nova-stage"), { ssr: false });
 const TOP_CLEARANCE = 7;
 /** Space he keeps clear above the intro line and Scroll button, in rem */
 const BOTTOM_CLEARANCE = 13;
-/** On wide screens he keeps to the right of the headline: fractions of the width */
-const WIDE_REGION: [number, number] = [0.72, 0.98];
+/** On wide screens he roams the right 56% of the width (widened from 26% on 2026-10-05, user) */
+const WIDE_REGION: [number, number] = [0.42, 0.98];
 /** Tablets: the headline is a little narrower relative to the screen */
-const TABLET_REGION: [number, number] = [0.66, 0.98];
+const TABLET_REGION: [number, number] = [0.5, 0.98];
 
 type NovaLayerProps = {
   /** Element whose scroll-out sends Nova away, also where the still pose sits */
@@ -84,8 +84,9 @@ function missingSupport(): string | null {
 /**
  * Nova on the page: a fixed 3D layer that floats in after the headline,
  * wanders, follows the pointer and leaves on scroll (spec: part 01).
- * Loads after the page is ready and the browser is idle, so it never delays
- * the text. Reduced motion, missing support, a failed scene or a model that
+ * Loads while the launch intro is up (holding its countdown until the model
+ * is ready, part 11a) and enters from the page cue, so it never delays the
+ * text. Reduced motion, missing support, a failed scene or a model that
  * does not show up within SHOW_TIMEOUT all get the still pose instead.
  */
 export function NovaLayer({ scrollOutSelector = "#banner" }: NovaLayerProps) {
@@ -94,6 +95,8 @@ export function NovaLayer({ scrollOutSelector = "#banner" }: NovaLayerProps) {
   const metrics = useSyncExternalStore(subscribeResize, metricsSnapshot, () => null);
   const [status, setStatus] = useState<"waiting" | "ready" | "shown" | "still">("waiting");
   const tag = useRef<HTMLDivElement>(null);
+  // Holds the intro's countdown until he is ready to fly, or has fallen back.
+  const release = useRef<() => void>(() => {});
   // Only the first reason is reported (switching to the still image itself
   // tears down the canvas, which loses its context).
   const fellBack = useRef(false);
@@ -101,28 +104,27 @@ export function NovaLayer({ scrollOutSelector = "#banner" }: NovaLayerProps) {
     if (fellBack.current) return;
     fellBack.current = true;
     console.info(`[nova] showing the still image: ${reason}`);
+    release.current();
     setStatus("still");
   };
 
   useEffect(() => {
-    let cancelled = false;
+    if (reducedMotion) return;
+    release.current = holdIntro();
     let idle = 0;
-    whenPageReady().then(() => {
-      if (cancelled) return;
-      const start = () => {
-        const missing = missingSupport();
-        if (missing) fallBack(missing);
-        else setStatus("ready");
-      };
-      if (typeof window.requestIdleCallback === "function") idle = window.requestIdleCallback(start, { timeout: 1200 });
-      else idle = window.setTimeout(start, 300);
-    });
+    const start = () => {
+      const missing = missingSupport();
+      if (missing) fallBack(missing);
+      else setStatus("ready");
+    };
+    if (typeof window.requestIdleCallback === "function") idle = window.requestIdleCallback(start, { timeout: 300 });
+    else idle = window.setTimeout(start, 100);
     return () => {
-      cancelled = true;
+      release.current();
       if (typeof window.cancelIdleCallback === "function") window.cancelIdleCallback(idle);
       window.clearTimeout(idle);
     };
-  }, []);
+  }, [reducedMotion]);
 
   // A model that never appears (stalled download, silent failure) also falls back.
   useEffect(() => {
@@ -158,17 +160,17 @@ export function NovaLayer({ scrollOutSelector = "#banner" }: NovaLayerProps) {
         insetTop={metrics.insetTop}
         insetBottom={metrics.insetBottom}
         follow={finePointer && metrics.wide}
-        enterDelay={0.9}
+        enterDelay={-0.15}
         region={metrics.region}
         tag={tag}
+        onLoaded={() => release.current()}
         onShown={() => setStatus("shown")}
         onFail={fallBack}
       />
       {/* Telemetry tag that rides beside Nova; the stage moves it every frame. */}
       <div ref={tag} aria-hidden data-shown="0" className="nova-tag readout pointer-events-none fixed top-0 left-0 z-40">
-        <span className="text-ground">{banner.nova.name}</span>
-        <br />
-        {banner.nova.status}
+        <span className="block text-ground">{banner.nova.name}</span>
+        <span className="mt-[0.7rem] block">{banner.nova.status}</span>
       </div>
     </>
   );

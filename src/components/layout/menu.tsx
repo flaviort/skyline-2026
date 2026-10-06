@@ -6,6 +6,7 @@ import { useCallback, useRef, useState } from "react";
 import { contactCta, nav } from "@/content/site";
 import { LogoMark } from "@/components/ui/logo-mark";
 import { PillButton } from "@/components/ui/pill-button";
+import { usePageEntrance } from "@/components/motion/use-page-entrance";
 import { cn } from "@/lib/utils";
 import { MobileMenu } from "./mobile-menu";
 import { NavPill } from "./nav-pill";
@@ -14,7 +15,8 @@ import { NavPill } from "./nav-pill";
  * The fixed header on every page (part 09): the S mark (white, blended), the black
  * box of links in the center and the Contact button. Under 768px the box
  * and button give way to a toggle and a full-screen panel. It sits above
- * everything, Nova included.
+ * everything, Nova included. It drops in with the first page entrance (it
+ * stays mounted across routes, so only after the launch intro).
  */
 export function Menu() {
   const path = usePathname();
@@ -23,6 +25,17 @@ export function Menu() {
   const open = openOn === path;
   const toggle = useRef<HTMLButtonElement>(null);
   const close = useCallback(() => setOpenOn(null), []);
+
+  usePageEntrance(
+    (timeline) => {
+      timeline.fromTo(
+        "[data-menu-enter]",
+        { autoAlpha: 0, yPercent: -60 },
+        { autoAlpha: 1, yPercent: 0, duration: 0.8, stagger: 0.08 },
+      );
+    },
+    { offset: -0.2 },
+  );
 
   return (
     <>
@@ -33,12 +46,13 @@ export function Menu() {
       <Link
         href="/"
         aria-label="The Skyline Agency, home"
-        className="fixed top-[1rem] left-[2rem] z-50 mt-[0.5rem] text-paper mix-blend-difference"
+        data-menu-enter
+        className="fixed top-[1rem] left-(--page-padding) z-50 mt-[0.5rem] text-paper mix-blend-difference"
       >
         <LogoMark className="h-[3.5rem] w-auto" />
       </Link>
 
-      <header className="pointer-events-none fixed inset-x-0 top-0 z-50 flex h-[5.35rem] items-start justify-between px-[2rem] pt-[1rem]">
+      <header data-menu-enter className="pointer-events-none fixed inset-x-0 top-0 z-50 flex h-[5.35rem] items-start justify-between px-page pt-[1rem]">
         {/* Keeps the bar's layout: the logo itself is drawn above. */}
         <span aria-hidden className="h-[3.5rem] w-[3.9rem]" />
 

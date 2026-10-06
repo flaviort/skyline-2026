@@ -18,8 +18,8 @@ Explored in the design canvas https://claude.ai/artifact/HWArLmV2VEn9UWqzeW8LYx 
 | Location and time | under the word | `Readout`: coordinates, "Dallas, TX", live Central time (ticks every second), in readout type. Phones: "Dallas, TX" and the time. No hairline, no "Signal acquired", no word list (removed 2026-10-02) |
 | Intro | bottom left | legacy line, 1.83rem, "we're an agency..." in bold |
 | Scroll | bottom right, 9.3rem circle | `ScrollCue`: hairline circle, two orange rings ripple out like Nova's antenna beacon; smooth-scrolls to the next section |
-| Nova | right side | the live 3D Nova as built; wanders in 72 to 98% of the width (66 to 98% on tablets, full width above the headline on phones). His entrance now lands in that zone |
-| Nova's tag | beside his shoulder | "Nova / EVA-01 · Orbit stable", orange left edge; follows him every frame, flips to his left near the screen edge, fades in once he has arrived and out as he leaves. No aim ring |
+| Nova | right side | the live 3D Nova as built; wanders in 42 to 98% of the width (50 to 98% on tablets, full width above the headline on phones); widened from 72 to 98% on 2026-10-05 (user), so he now crosses in front of the longer words. His entrance now lands in that zone |
+| Nova's tag | beside his shoulder | "Nova / EVA-01 · Orbit stable" on two lines with a 0.7rem gap (2026-10-05), orange left edge; follows him every frame, flips to his left near the screen edge, fades in once he has arrived and out as he leaves. No aim ring |
 
 Open: the logo band (part 02) used to sit in the banner's bottom 11rem, which direction F now fills with the intro and Scroll button. Part 02 needs a new place (likely just below the banner).
 
