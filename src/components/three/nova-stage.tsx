@@ -481,9 +481,11 @@ function Nova({
     // His banner home: vertically centered, in the middle of his band (the right side).
     const homeX = (bounds.left + bounds.right) / 2;
     const homeY = clamp(h / 2, bounds.top, bounds.bottom);
-    if (m.enter > 0.3) {
-      // Away on the journey: his banner self waits at home, so scrolling back
-      // brings him there, and he lingers a moment before wandering again.
+    if (m.enter > 0.98) {
+      // Fully away on the journey: his banner self waits at home, so scrolling
+      // back brings him there, and he lingers a moment before wandering again.
+      // (Only once fully away: moving it while the journey blend still uses it
+      // made him jump.)
       m.position.set(homeX, homeY);
       m.velocity.set(0, 0);
       m.homeUntil = time + 1.6;
@@ -510,6 +512,9 @@ function Nova({
       const distance = Math.hypot(dx, dy) || 1;
       const keep = novaH * 0.55;
       m.target.set(px + (dx / distance) * keep, py + (dy / distance) * keep);
+    } else if (m.enter > 0.02) {
+      // Leaving the banner: hold still, so the blend into the journey is the only motion.
+      m.target.copy(m.position);
     } else if (homing) {
       m.target.set(homeX, homeY);
     } else if (tilting) {
@@ -618,7 +623,8 @@ function Nova({
       if (Math.abs(m.scrolled - scrolled) < 0.5) m.scrolled = scrolled;
       const landingFrom = Math.max(h * 0.6, total - h * 1.1);
       const journeyFrom = h * 0.45;
-      enter = easeInOut(range(m.scrolled, 0, h * 0.6));
+      // Spread over most of a screen, so the move into the journey is gentle.
+      enter = easeInOut(range(m.scrolled, 0, h * 0.9));
       j = landingFrom > journeyFrom ? range(m.scrolled, journeyFrom, landingFrom) : enter;
       p = range(m.scrolled, landingFrom, total);
       m.landing = total > 0 ? clamp(m.scrolled / total, 0, 1) : 0;

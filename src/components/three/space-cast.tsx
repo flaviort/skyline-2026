@@ -96,8 +96,7 @@ function createMaterials(environment: THREE.Texture) {
     ink: lacquer(COLORS.ink, environment, 0.3),
     // Matte clay, not lacquer: a rock should not shine like the suit.
     moon: lacquer("#f1e2c4", environment, 0.5),
-    // Stone: flat-shaded facets, coloured per face, no shine.
-    rock: new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95, metalness: 0, envMap: environment, envMapIntensity: 0.35 }),
+    rock: stoneMaterial(environment),
     glass: new THREE.MeshPhysicalMaterial({
       color: "#bcd4ff",
       roughness: 0.05,
@@ -193,63 +192,197 @@ function buildRocket(m: Materials) {
 }
 
 // ---------------------------------------------------------------------------
-// Asteroids: chiselled rocks. Big flat cuts break the round silhouette, a
-// fine jitter roughens the surface, sharp-rimmed craters are pressed in and
-// shaded darker, and the faces render flat so every facet catches the light.
+// Asteroids, after the user's references (2026-10-06): lumpy pale stone
+// covered in round craters of every size, with deep bowls, crisp raised
+// rims, warmer and darker crater floors, fine grain and speckles. Shape,
+// grain and colour are all baked into the vertices; nothing is downloaded.
+
+/** Smooth 3D value noise, about -1..1. */
+function noise3(x: number, y: number, z: number, seed: number) {
+  const hash = (i: number, j: number, k: number) => {
+    const h = Math.sin(i * 127.1 + j * 311.7 + k * 74.7 + seed * 19.19) * 43758.5453;
+    return (h - Math.floor(h)) * 2 - 1;
+  };
+  const xi = Math.floor(x);
+  const yi = Math.floor(y);
+  const zi = Math.floor(z);
+  const fade = (t: number) => t * t * (3 - 2 * t);
+  const u = fade(x - xi);
+  const v = fade(y - yi);
+  const w = fade(z - zi);
+  const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+  return lerp(
+    lerp(lerp(hash(xi, yi, zi), hash(xi + 1, yi, zi), u), lerp(hash(xi, yi + 1, zi), hash(xi + 1, yi + 1, zi), u), v),
+    lerp(lerp(hash(xi, yi, zi + 1), hash(xi + 1, yi, zi + 1), u), lerp(hash(xi, yi + 1, zi + 1), hash(xi + 1, yi + 1, zi + 1), u), v),
+    w,
+  );
+}
+
+/** Layered noise: broad lumps down to fine grain. */
+function fbm(p: THREE.Vector3, seed: number, octaves: number, scale: number) {
+  let total = 0;
+  let amplitude = 1;
+  let frequency = scale;
+  let norm = 0;
+  for (let i = 0; i < octaves; i++) {
+    total += noise3(p.x * frequency, p.y * frequency, p.z * frequency, seed + i * 7) * amplitude;
+    norm += amplitude;
+    amplitude *= 0.5;
+    frequency *= 2.1;
+  }
+  return total / norm;
+}
 
 function rockGeometry(seed: number) {
-  const base = mergeVertices(new THREE.IcosahedronGeometry(1, 4).deleteAttribute("normal").deleteAttribute("uv"));
-  const position = base.getAttribute("position") as THREE.BufferAttribute;
+  const geometry = mergeVertices(new THREE.IcosahedronGeometry(1, 6).deleteAttribute("normal").deleteAttribute("uv"));
+  const position = geometry.getAttribute("position") as THREE.BufferAttribute;
   const random = seeded(seed * 7919);
   const direction = () => new THREE.Vector3(random() - 0.5, random() - 0.5, random() - 0.5).normalize();
-  // Cuts: anything beyond a plane is pushed most of the way back onto it.
-  const cuts = Array.from({ length: 9 }, () => ({ normal: direction(), offset: 0.62 + random() * 0.25 }));
-  const craters = Array.from({ length: 7 }, (_, i) => ({ center: direction(), size: i < 2 ? 0.38 + random() * 0.12 : 0.14 + random() * 0.16 }));
-  const stretch = new THREE.Vector3(1.1 + random() * 0.35, 0.78 + random() * 0.15, 0.85 + random() * 0.2);
-  const shade = new Float32Array(position.count);
+  // Craters: a few big, more medium, many small.
+  const craters = Array.from({ length: 30 }, (_, i) => {
+    const size = i < 3 ? 0.3 + random() * 0.15 : i < 12 ? 0.14 + random() * 0.1 : 0.08 + random() * 0.05;
+    return { center: direction(), size, depth: size * (0.5 + random() * 0.2) };
+  });
+  // Two or three broad flattened sides break the round outline.
+  const cuts = Array.from({ length: 3 }, () => ({ normal: direction(), offset: 0.78 + random() * 0.12 }));
+  const stretch = new THREE.Vector3(1.15 + random() * 0.3, 0.82 + random() * 0.12, 0.92 + random() * 0.15);
+
+  const colors = new Float32Array(position.count * 3);
+  const stone = new THREE.Color("#d2cabd");
+  const shadow = new THREE.Color("#3e3732");
+  const floor = new THREE.Color("#7d6650");
+  const rimTone = new THREE.Color("#eee8de");
+  const color = new THREE.Color();
   const v = new THREE.Vector3();
   for (let i = 0; i < position.count; i++) {
     v.fromBufferAttribute(position, i).normalize();
-    let radius = 1 + (random() - 0.5) * 0.07;
-    let dark = 0;
+    // Lumps and grain.
+    let radius = 1 + fbm(v, seed, 3, 1.6) * 0.16 + fbm(v, seed + 50, 3, 12) * 0.03;
+    let bowl = 0;
+    let rim = 0;
     for (const crater of craters) {
       const d = v.distanceTo(crater.center) / crater.size;
       if (d < 1) {
-        radius -= (0.08 + crater.size * 0.38) * (1 - d * d);
-        dark = Math.max(dark, Math.min(1, (1 - d) * 1.6));
-      } else if (d < 1.25) {
-        radius += 0.09 * crater.size * Math.sin(((d - 1) / 0.25) * Math.PI);
+        // Steep walls and a flatter floor, like a real impact bowl.
+        const inside = 1 - d ** 4;
+        radius -= crater.depth * inside;
+        bowl = Math.max(bowl, inside);
       }
+      // A crisp raised rim just outside the edge.
+      const edge = Math.exp(-(((d - 1) / 0.15) ** 2));
+      radius += crater.depth * 0.45 * edge;
+      rim = Math.max(rim, edge);
     }
     v.multiplyScalar(radius);
     for (const cut of cuts) {
       const depth = v.dot(cut.normal) - cut.offset;
-      if (depth > 0) v.addScaledVector(cut.normal, -depth * 0.85);
+      // Soft: flattens most of the way, keeps a little curve.
+      if (depth > 0) v.addScaledVector(cut.normal, -depth * 0.7);
     }
     v.multiply(stretch);
     position.setXYZ(i, v.x, v.y, v.z);
-    shade[i] = dark;
-  }
-  base.setAttribute("shade", new THREE.BufferAttribute(shade, 1));
-  // Flat faces: split the shared vertices so each face shades on its own.
-  const geometry = base.toNonIndexed();
-  base.dispose();
-  const flatShade = geometry.getAttribute("shade") as THREE.BufferAttribute;
-  const colors = new Float32Array(flatShade.count * 3);
-  const light = new THREE.Color("#9a8f84");
-  const deep = new THREE.Color("#2f2a27");
-  const color = new THREE.Color();
-  for (let face = 0; face < flatShade.count; face += 3) {
-    // One tone per face, a little varied, darker inside craters.
-    const dark = (flatShade.getX(face) + flatShade.getX(face + 1) + flatShade.getX(face + 2)) / 3;
-    const vary = (random() - 0.5) * 0.12;
-    color.copy(light).lerp(deep, clamp(dark * 0.85 + 0.12 + vary, 0, 1));
-    for (let k = 0; k < 3; k++) color.toArray(colors, (face + k) * 3);
+
+    // Colour: pale stone with mottling and speckles, warm darker floors, light rims.
+    const mottle = fbm(v, seed + 90, 3, 3);
+    // Grain and speckles: small dark pits and pale flecks over the whole surface.
+    const grain = noise3(v.x * 22, v.y * 22, v.z * 22, seed + 170) * 0.09;
+    const pit = noise3(v.x * 30, v.y * 30, v.z * 30, seed + 130);
+    const speckle = pit > 0.5 ? 0.3 : pit < -0.62 ? -0.25 : 0;
+    color.copy(stone).lerp(shadow, clamp(Math.max(0, mottle * 0.35) + speckle + grain, -0.4, 1));
+    color.lerp(floor, Math.min(1, bowl * 1.1)).lerp(shadow, bowl ** 1.5 * 0.55);
+    color.lerp(rimTone, rim * (1 - bowl) * 0.5);
+    color.toArray(colors, i * 3);
   }
   geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-  geometry.deleteAttribute("shade");
   geometry.computeVertexNormals();
   return geometry;
+}
+
+/** GLSL 3D value noise and layered noise, for the stone's per-pixel detail. */
+const STONE_NOISE = /* glsl */ `
+  float stoneHash(vec3 p) {
+    p = fract(p * 0.3183099 + 0.1);
+    p *= 17.0;
+    return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+  }
+  float stoneNoise(vec3 x) {
+    vec3 i = floor(x);
+    vec3 f = fract(x);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(
+      mix(mix(stoneHash(i), stoneHash(i + vec3(1, 0, 0)), f.x), mix(stoneHash(i + vec3(0, 1, 0)), stoneHash(i + vec3(1, 1, 0)), f.x), f.y),
+      mix(mix(stoneHash(i + vec3(0, 0, 1)), stoneHash(i + vec3(1, 0, 1)), f.x), mix(stoneHash(i + vec3(0, 1, 1)), stoneHash(i + vec3(1, 1, 1)), f.x), f.y),
+      f.z);
+  }
+  float stoneFbm(vec3 p) {
+    float total = 0.0;
+    float amplitude = 0.5;
+    for (int i = 0; i < 4; i++) {
+      total += stoneNoise(p) * amplitude;
+      p = p * 2.07 + 13.1;
+      amplitude *= 0.5;
+    }
+    return total;
+  }
+  // Bends the normal by a height field's screen-space slope (as three's bump map does).
+  vec3 stonePerturb(vec3 surfacePosition, vec3 surfaceNormal, vec2 dHdxy, float side) {
+    vec3 vSigmaX = normalize(dFdx(surfacePosition));
+    vec3 vSigmaY = normalize(dFdy(surfacePosition));
+    vec3 vN = surfaceNormal;
+    vec3 R1 = cross(vSigmaY, vN);
+    vec3 R2 = cross(vN, vSigmaX);
+    float fDet = dot(vSigmaX, R1) * side;
+    vec3 vGrad = sign(fDet) * (dHdxy.x * R1 + dHdxy.y * R2);
+    return normalize(abs(fDet) * surfaceNormal - vGrad);
+  }
+`;
+
+/**
+ * Stone material. Per-pixel detail from 3D noise on the rock's own surface
+ * (fine bumps that catch the light, grain, dark pits and pale flecks), so it
+ * stays crisp however close a rock comes. The scene's blue and magenta rim
+ * lights suit the suit, not rock: the lit colour is rebuilt from the stone's
+ * own colour at the lit brightness, so it stays pale stone with warm floors.
+ */
+function stoneMaterial(environment: THREE.Texture) {
+  const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, metalness: 0, envMap: environment, envMapIntensity: 0.4 });
+  material.onBeforeCompile = (shader) => {
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", "#include <common>\nvarying vec3 vStonePosition;")
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvStonePosition = position;");
+    shader.fragmentShader = shader.fragmentShader
+      .replace("#include <common>", `#include <common>\nvarying vec3 vStonePosition;\n${STONE_NOISE}`)
+      .replace(
+        "#include <color_fragment>",
+        `#include <color_fragment>
+        vec3 stoneP = vStonePosition;
+        float stoneGrain = stoneFbm(stoneP * 16.0);
+        float stonePits = stoneNoise(stoneP * 24.0 + 7.0);
+        float stoneFlecks = stoneNoise(stoneP * 30.0 + 31.0);
+        diffuseColor.rgb *= 0.9 + stoneGrain * 0.2;
+        // Small pits read as tiny craters: soft, warm and dark.
+        diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.62, 0.56, 0.5), smoothstep(0.8, 0.9, stonePits) * 0.8);
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.92, 0.89, 0.84), smoothstep(0.86, 0.95, stoneFlecks) * 0.3);`,
+      )
+      .replace(
+        "#include <normal_fragment_maps>",
+        `#include <normal_fragment_maps>
+        float stoneHeight = stoneFbm(vStonePosition * 9.0) + stoneFbm(vStonePosition * 20.0) * 0.3 - smoothstep(0.8, 0.9, stoneNoise(vStonePosition * 24.0 + 7.0)) * 0.3;
+        vec2 stoneSlope = vec2(dFdx(stoneHeight), dFdy(stoneHeight)) * 1.6;
+        normal = stonePerturb(-vViewPosition, normal, stoneSlope, faceDirection);`,
+      )
+      .replace(
+        "#include <dithering_fragment>",
+        `#include <dithering_fragment>
+        // Brightness from the lighting, hue from the stone itself.
+        vec3 stoneLumaWeights = vec3(0.299, 0.587, 0.114);
+        float litLuma = dot(gl_FragColor.rgb, stoneLumaWeights);
+        vec3 albedo = diffuseColor.rgb;
+        float albedoLuma = max(dot(albedo, stoneLumaWeights), 0.02);
+        gl_FragColor.rgb = mix(gl_FragColor.rgb, albedo * (litLuma / albedoLuma), 0.8);`,
+      );
+  };
+  return material;
 }
 
 // ---------------------------------------------------------------------------

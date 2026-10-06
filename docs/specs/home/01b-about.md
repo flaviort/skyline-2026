@@ -77,7 +77,9 @@ User: the vibe is Despicable Me (Illumination), polished and characterful, not c
 - Stars: down to six hand-placed ones on the journey (four on phones) and three around the about text. They keep drifting up through the landing (`sparkleAt` takes `j + p * 0.4`) instead of all disappearing when the landing starts, which is what made them vanish at once.
 - UFO: the shaking came from changing its spin speed mid-flight (the angle jumped) and a deliberate jitter while beaming. Spin, bank and climb are now integrated and smoothed frame to frame, the jitter is gone, the lights chase at a steady speed, and its path takes longer (it enters at `j` 0.56 and leaves by 0.97).
 - Planet: no storm oval and no clearcoat; a satin surface with soft craters.
-- Asteroids: rebuilt as chiselled rocks: flat cuts break the round outline, sharp-rimmed craters with dark floors, flat-shaded facets coloured per face.
+- UFO and planet no longer overlap (2026-10-06): the planet leaves the top sooner (gone by `j` 0.78), and the UFO enters low on the right (from 0.62) and only rises to hover once the planet is gone; the beam, waves and exit moved later to match (beam 0.77 to 0.88, exit by 0.98).
+- Banner to journey jump fixed (2026-10-06): his banner position was snapped home a third of the way into the handoff, while the blend still used it, so he leapt about 73px in one frame. It now goes home only once he is fully out, he holds still while leaving, and the handoff spans 90% of a screen. Measured in the browser: the largest move between frames in that stretch dropped from 73px to 5px.
+- Asteroids (2026-10-06, after five reference images from the user): lumpy pale stone with about 30 round craters of every size (steep walls, flatter floors, crisp raised rims), a few softly flattened sides, warm darker crater floors and lighter rims baked into vertex colours. Per-pixel detail in the shader (`stoneMaterial`): fine bumps from 3D noise, grain, small dark pits and pale flecks, so a rock stays crisp up close. The blue and magenta rim lights are neutralized on stone: the lit brightness is kept, the hue comes from the rock.
 
 ### Phone tilt (2026-10-05)
 

@@ -104,7 +104,7 @@ export function kickRockAt(j: number, novaFeet: number) {
 export function planetAt(j: number) {
   return {
     fx: track([[0.36, 0.5], [0.5, 0.48], [0.66, 0.52], [0.82, 0.54]], j),
-    fy: track([[0.36, 1.7], [0.5, 0.56], [0.66, 0.44], [0.82, -0.7]], j),
+    fy: track([[0.36, 1.7], [0.5, 0.56], [0.66, 0.44], [0.78, -0.75]], j),
     z: -1.8,
     size: 0.62,
   };
@@ -123,15 +123,17 @@ export function orbitAt(j: number) {
 export function ufoAt(j: number) {
   return {
     // Swoops in low from the right and pulls up over Nova.
-    fx: track([[0.56, 1.35], [0.64, 0.95], [0.71, 0.63], [0.84, 0.6], [0.97, 0.68]], j),
-    fy: track([[0.56, 0.1], [0.64, 0.34], [0.71, 0.25], [0.84, 0.23], [0.97, -0.65]], j),
+    // Comes in low on the right while the planet leaves the top, and only
+    // rises to hover once the planet is gone, so the two never overlap.
+    fx: track([[0.62, 1.35], [0.7, 0.95], [0.77, 0.63], [0.87, 0.6], [0.98, 0.68]], j),
+    fy: track([[0.62, 0.66], [0.7, 0.55], [0.77, 0.27], [0.87, 0.25], [0.98, -0.65]], j),
     z: -0.8,
     size: 1.05,
-    beam: easeInOut(range(j, 0.71, 0.75)) * (1 - easeInOut(range(j, 0.81, 0.85))),
-    wave: bump(range(j, 0.74, 0.84)),
+    beam: easeInOut(range(j, 0.77, 0.8)) * (1 - easeInOut(range(j, 0.85, 0.88))),
+    wave: bump(range(j, 0.78, 0.88)),
     // A crouch before it zips off, then a stretch on the way out.
-    squash: bump(range(j, 0.82, 0.87)),
-    stretch: bump(range(j, 0.87, 0.97)),
+    squash: bump(range(j, 0.85, 0.89)),
+    stretch: bump(range(j, 0.89, 0.98)),
   };
 }
 
@@ -197,8 +199,8 @@ export type NovaCue = {
   lookY: number | null;
 };
 
-const NOVA_X: Key[] = [[0, 0.7], [0.1, 0.68], [0.2, 0.64], [0.3, 0.63], [KICK_AT, 0.63], [0.46, 0.36], [0.68, 0.4], [0.75, 0.6], [0.82, 0.6], [0.9, 0.55], [1, 0.5]];
-const NOVA_Y: Key[] = [[0, 0.5], [0.1, 0.46], [0.2, 0.42], [0.3, 0.46], [KICK_AT, 0.5], [0.46, 0.36], [0.68, 0.56], [0.75, 0.64], [0.82, 0.52], [0.9, 0.48], [1, 0.45]];
+const NOVA_X: Key[] = [[0, 0.7], [0.1, 0.68], [0.2, 0.64], [0.3, 0.63], [KICK_AT, 0.63], [0.46, 0.36], [0.68, 0.4], [0.78, 0.6], [0.86, 0.6], [0.93, 0.55], [1, 0.5]];
+const NOVA_Y: Key[] = [[0, 0.5], [0.1, 0.46], [0.2, 0.42], [0.3, 0.46], [KICK_AT, 0.5], [0.46, 0.36], [0.68, 0.56], [0.78, 0.66], [0.86, 0.54], [0.93, 0.48], [1, 0.45]];
 
 const planetWorld = new THREE.Vector3();
 const orbitWorld = new THREE.Vector3();
@@ -245,6 +247,6 @@ export function novaAt(j: number, aspect: number, K: number, out: NovaCue) {
     out.lookX = ufo.fx;
     out.lookY = ufo.fy;
   }
-  out.wave = bump(range(j, 0.76, 0.86));
+  out.wave = bump(range(j, 0.8, 0.9));
   return out;
 }
