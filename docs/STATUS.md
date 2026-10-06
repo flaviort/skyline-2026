@@ -30,7 +30,13 @@ The specs for parts 02 and later were written before these; apply them when each
 | Foundations | fluid scale and tokens in `src/app/globals.css`, GSAP setup `src/lib/gsap.ts`, Lenis `src/components/providers/smooth-scroll.tsx`, shared pointer `src/lib/pointer.ts` |
 | Lab | `/lab` (dev only): every component on its own, plus Nova in a box with a button per trick |
 
-Below the banner, `src/app/page.tsx` has a temporary placeholder section so the scroll-out can be reviewed. Part 03 replaces it.
+Below the banner sits part 01b (about), then a temporary placeholder for part 03.
+
+## Part 01b, about, built and in review (2026-10-05)
+
+The old site's About block (legacy copy) centered under the banner, with Nova taking the old 3D S's move: as the banner leaves he frontflips to the middle of the screen, lands softly on the spot above the heading, holds there until the text arrives, then rides off with it. He keeps floating the whole time (user). Spec and as-built notes: `docs/specs/home/01b-about.md`. Files: `src/components/sections/home/about.tsx`, `src/components/type/eyebrow.tsx`, the landing block in `src/components/three/nova-stage.tsx`, `src/lib/nova-landing.ts`; `PillButton` got `tone` and `size`, `useKineticText` got `reveal.scroll`. Open questions taken with defaults (part 03 stays, heading ABOUT, no wave after landing); the user can still change them. Also fixed: Nova vanished after scrolling down past him and back up (canvas clock reset).
+
+**Round 2, the space journey** (same day, user: "make it more interesting and creative"): between the banner and the about section, about four screens of scroll where Nova stays on screen and floats through space: a chubby rocket blasts past (he twirls in its wake), an asteroid field (he kicks off one rock), a ringed planet he circles in depth, a UFO whose alien waves while its beam lifts him (he waves back), sparkle stars throughout; then the frontflip and landing. All built in code in Nova's lacquer style (`space-journey.ts` timeline, `space-cast.tsx` objects); the 3D designer can replace any object later. Scrolling back up returns him to his banner home on the middle-right. No mission log captions for now (offered; they would be new copy). Same day: review tweaks (Despicable Me / Illumination vibe, not childish: sharper rocket, more craters, glowing stars, a detailed planet, a green alien and a livelier UFO, stars around the about text) and phone tilt for Nova (`src/lib/tilt.ts`; iPhones ask for motion permission on the first tap). Tilt was verified with emulated orientation in headless Chrome only; it still needs a check on a real iPhone and Android phone.
 
 ## Next steps
 

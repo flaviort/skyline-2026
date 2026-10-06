@@ -15,5 +15,17 @@ export const banner = {
     timeZone: "America/Chicago",
   },
   nova: { name: "Nova / EVA-01", status: "Orbit stable" },
-  scroll: { label: "Scroll", href: "#agency" },
+  scroll: { label: "Scroll", href: "#journey" },
+};
+
+// Part 01b. Legacy site copy (the live site's About block).
+export const about = {
+  eyebrow: "About Skyline",
+  heading: "About",
+  body: {
+    before: "Through expert strategy and genius thinking, we launch and",
+    strong: "grow brands",
+    after: ", both national and global, as well as help startups that need to punch above their weight.",
+  },
+  button: { label: "Get to Know Us", href: "/about" },
 };

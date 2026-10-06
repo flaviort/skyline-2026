@@ -11,6 +11,7 @@ Overview and direction contract: [home/README.md](home/README.md)
 | # | Spec | Status |
 |---|---|---|
 | 01 | [Banner](home/01-banner.md) | review |
+| 01b | [About, Nova lands](home/01b-about.md) | review (round 2) |
 | 02 | [Logos](home/02-logos.md) | spec |
 | 03 | [Agency / about](home/03-agency.md) | spec |
 | 04 | [Recent projects](home/04-recent-projects.md) | spec |

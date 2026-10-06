@@ -30,6 +30,8 @@
   --color-cobalt: #2340ff;
   --color-visor: #ffb800;
   --color-lilac: #c8b6ff;
+  /* The alien in the space journey (part 01b); the 3D scene uses the same hex. */
+  --color-alien: #7bd94a;
   --color-transparent: transparent;
   --color-current: currentColor;
 
@@ -352,6 +354,18 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+.pill-button--orange {
+  background-color: var(--color-orange);
+  color: var(--color-ink);
+}
+.pill-button--orange .pill-button__dot {
+  background-color: var(--color-ink);
+}
+
+.pill-button--large {
+  font-size: max(1.33rem, 14px);
+}
+
 .pill-button__dots {
   position: relative;
   display: block;
@@ -613,4 +627,25 @@ html.intro-lock {
   .block-reveal__block {
     background-color: var(--color-orange);
   }
+}
+
+/* Part 01b: about four screens of scroll for the space journey; none without the 3D scene. */
+.space-journey {
+  height: 400svh;
+}
+:root[data-nova="still"] .space-journey {
+  height: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .space-journey {
+    height: 0;
+  }
+}
+
+/* Part 01b: the still Nova on the landing spot shows only when the 3D one is not running. */
+.nova-still {
+  display: none;
+}
+:root[data-nova="still"] .nova-still {
+  display: block;
 }

@@ -7,12 +7,15 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 import { pointer, pointerIsActive, trackPointer } from "@/lib/pointer";
+import { tilt as phoneTilt, tiltIsActive, trackTilt } from "@/lib/tilt";
 import { gsap } from "@/lib/gsap";
 import { whenPageReady } from "@/lib/page-ready";
 import { clamp } from "@/lib/utils";
 import { LIGHTS, createBeacon, createStudioScene, createSuitScene, dressNova } from "./nova-look";
 import { ARM_REST_LIFT, AXIS, captureRest, findBones, poseBone } from "./nova-rig";
 import { emptyTrickState, nextTrick, playTrick, settleTricks, type TrickName } from "./nova-tricks";
+import { SpaceCast, createJourneyState, type JourneyState } from "./space-cast";
+import { CAMERA_FOV, CAMERA_Z, bump, easeInOut, novaAt, range, toWorld, type NovaCue } from "./space-journey";
 
 const MODEL_URL = "/models/nova.glb";
 /** The model is Meshopt-compressed (npm run model:nova). */
@@ -35,6 +38,10 @@ const WAVE_THUMB_LIFT = 0.5;
 const ENTRANCE_FLIGHT_SIZE = 0.55;
 /** How far he is tipped head first toward the viewer while flying in (radians; the head nods back to keep the visor in view) */
 const ENTRANCE_PITCH = 0.95;
+/** His size once landed on the about section, as a scale multiplier (part 01b) */
+export const LANDING_SIZE = 0.6;
+/** How fast the landing catches up with the scroll: lower trails more (like the old site's `scrub: 3`) */
+const LANDING_LAG = 3.5;
 /** Canvas stacking (page mode): behind the banner text (z-2) while he flies in, then over everything */
 const LAYER_BEHIND = "1";
 const LAYER_FRONT = "40";
@@ -59,6 +66,15 @@ export type NovaStageProps = {
   mode?: "page" | "box";
   /** Element whose scroll-out takes Nova off screen (page mode) */
   scrollOutSelector?: string;
+  /**
+   * Element Nova lands on as the scroll-out runs (page mode, part 01b): he
+   * frontflips to it instead of floating away, holds in the middle of the
+   * screen until it arrives, then rides on it. Its parent is the block that
+   * gets centered on screen when he lands.
+   */
+  landingSelector?: string;
+  /** Shared with the space journey's cast (set by NovaStage) */
+  journey?: RefObject<JourneyState>;
   /** Space Nova keeps clear at the top and bottom, in px (menu, logo band) */
   insetTop?: number;
   insetBottom?: number;
@@ -99,8 +115,24 @@ type Motion = {
   /** One spring per animated bone channel */
   springs: Record<string, Spring>;
   scroll: number;
+  /** Share of the way from the banner to the landing (part 01b), trailing the scroll */
+  landing: number;
+  /** Scroll distance from the banner's top, smoothed (the journey's lag) */
+  scrolled: number;
+  /** How far he has left the banner for the journey, 0 to 1 */
+  enter: number;
+  /** Back from the journey, he waits at his banner home until then */
+  homeUntil: number;
+  /** Phone tilt, smoothed, -1 to 1 (touch screens) */
+  tiltX: number;
+  tiltY: number;
+  /** Where he was drawn last frame and how fast that moved, px and px per second */
+  drawn: THREE.Vector2;
+  drawnVelocity: THREE.Vector2;
   entered: boolean;
 };
+
+
 
 /** Studio lighting generated locally (no HDR download): see nova-look.ts. */
 function Studio() {
@@ -125,6 +157,8 @@ function Studio() {
 function Nova({
   mode,
   scrollOutSelector,
+  landingSelector,
+  journey,
   insetTop = 0,
   insetBottom = 0,
   height,
@@ -204,6 +238,11 @@ function Nova({
   // tells an interrupted trick's completion apart from the current one's.
   const trickClock = useRef({ now: 0, nextAt: FIRST_TRICK, previous: null as TrickName | null, playing: false, run: 0 });
   const startedAt = useRef<number | null>(null);
+  const clockTime = useRef(0);
+  // The box mode (lab) has no cast; it keeps a journey state of its own.
+  const ownJourney = useRef<JourneyState>(createJourneyState());
+  const journeyState = journey ?? ownJourney;
+  const journeyCue = useRef<NovaCue>({ fx: 0.5, fy: 0.5, z: 0, scale: 1, spin: 0, tuck: 0, kick: 0, wave: 0, lookX: null, lookY: null });
   // The entrance: a GSAP timeline drives his place on screen (px), his depth
   // (`zoom`, a scale multiplier: 0 is far away, above 1 is close to the
   // screen), how much of the flying pose he holds (`fly`), how far he is
@@ -246,11 +285,20 @@ function Nova({
     previousVelocity: new THREE.Vector2(),
     springs: {},
     scroll: 0,
+    landing: 0,
+    scrolled: 0,
+    enter: 0,
+    homeUntil: 0,
+    tiltX: 0,
+    tiltY: 0,
+    drawn: new THREE.Vector2(),
+    drawnVelocity: new THREE.Vector2(),
     entered: false,
   });
 
   useEffect(() => {
     trackPointer();
+    if (mode === "page") trackTilt();
     const clock = trickClock.current;
     // Plays a trick now, cutting short the one in progress.
     const start = (name: TrickName) => {
@@ -267,7 +315,7 @@ function Nova({
     };
     const onTrick = (event: Event) => start((event as CustomEvent<TrickName>).detail);
     const onClick = (event: PointerEvent) => {
-      if (entrance.current.active) return;
+      if (entrance.current.active || motion.current.landing > 0.02) return;
       if (event.button !== 0 || (event.target as Element | null)?.closest?.(INTERACTIVE)) return;
       start(nextTrick(clock.previous));
     };
@@ -277,7 +325,7 @@ function Nova({
       window.removeEventListener("nova:trick", onTrick);
       window.removeEventListener("pointerdown", onClick);
     };
-  }, []);
+  }, [mode]);
 
   // Development only: lets the lab freeze Nova and pose him from the console.
   useEffect(() => {
@@ -311,7 +359,10 @@ function Nova({
     if (!group) return;
     if ((window as unknown as { __nova?: { freeze: boolean } }).__nova?.freeze) return;
     const dt = Math.min(rawDelta, 1 / 30);
-    const time = state.clock.elapsedTime;
+    // His own clock: the canvas clock restarts when rendering pauses (scrolled
+    // off screen) and resumes, which would replay the entrance and hide him.
+    clockTime.current += Math.min(rawDelta, 0.1);
+    const time = clockTime.current;
     const m = motion.current;
     const s = tricks.current;
 
@@ -424,7 +475,26 @@ function Nova({
     const px = pointer.x - rect.left;
     const py = pointer.y - rect.top;
     const pointerInside = px >= 0 && px <= w && py >= 0 && py <= h;
-    const following = follow && m.entered && pointerIsActive(2500) && pointerInside;
+    // Watching: his head and body turn to the pointer. Following: he also moves
+    // toward it, only while he floats around the banner.
+    const watching = follow && m.entered && pointerIsActive(2500) && pointerInside;
+    // His banner home: vertically centered, in the middle of his band (the right side).
+    const homeX = (bounds.left + bounds.right) / 2;
+    const homeY = clamp(h / 2, bounds.top, bounds.bottom);
+    if (m.enter > 0.3) {
+      // Away on the journey: his banner self waits at home, so scrolling back
+      // brings him there, and he lingers a moment before wandering again.
+      m.position.set(homeX, homeY);
+      m.velocity.set(0, 0);
+      m.homeUntil = time + 1.6;
+    }
+    const homing = time < m.homeUntil;
+    // Phones: tilt plays the pointer's part. He floats toward the low side and
+    // looks that way; on the journey it adds parallax.
+    const tilting = !follow && tiltIsActive();
+    m.tiltX = THREE.MathUtils.damp(m.tiltX, tilting ? phoneTilt.x : 0, 4, dt);
+    m.tiltY = THREE.MathUtils.damp(m.tiltY, tilting ? phoneTilt.y : 0, 4, dt);
+    const following = watching && m.landing < 0.1 && !homing;
 
     // Where Nova wants to be.
     if (following && pointer.interactive) {
@@ -440,6 +510,11 @@ function Nova({
       const distance = Math.hypot(dx, dy) || 1;
       const keep = novaH * 0.55;
       m.target.set(px + (dx / distance) * keep, py + (dy / distance) * keep);
+    } else if (homing) {
+      m.target.set(homeX, homeY);
+    } else if (tilting) {
+      // The whole band: phones leave him little room, so every bit counts.
+      m.target.set(homeX + m.tiltX * Math.max((bounds.right - bounds.left) * 0.5, w * 0.22), homeY + m.tiltY * (bounds.bottom - bounds.top) * 0.5);
     } else {
       if (!e.active) m.wander += dt;
       wanderTarget(m.wander, m.target);
@@ -477,7 +552,7 @@ function Nova({
       m.position.set(e.x, e.y);
     } else {
       // Damped spring toward the target: soft lag, no snapping.
-      const stiffness = following ? 6 : 3;
+      const stiffness = following ? 6 : tilting ? 5 : 3;
       const damping = 2 * Math.sqrt(stiffness) * 0.9;
       m.velocity.x += (stiffness * (m.target.x - m.position.x) - damping * m.velocity.x) * dt;
       m.velocity.y += (stiffness * (m.target.y - m.position.y) - damping * m.velocity.y) * dt;
@@ -488,7 +563,13 @@ function Nova({
     // Tricks every few seconds, while he follows the pointer or not.
     const clock = trickClock.current;
     clock.now = time;
-    if (m.entered && !clock.playing && time > clock.nextAt) {
+    // Leaving the banner ends any trick: the landing flip takes over.
+    if (m.landing > 0.02 && clock.playing && !e.active) {
+      clock.run++;
+      clock.playing = false;
+      settleTricks(s, 0.3);
+    }
+    if (m.entered && m.landing <= 0.02 && !clock.playing && time > clock.nextAt) {
       const run = ++clock.run;
       clock.playing = true;
       clock.previous = nextTrick(clock.previous);
@@ -499,42 +580,131 @@ function Nova({
       });
     }
 
+    // Scroll-out (page mode, no landing spot): float up and off as the banner leaves.
+    const banner = mode === "page" && scrollOutSelector ? document.querySelector(scrollOutSelector) : null;
+    const slot = mode === "page" && landingSelector ? document.querySelector(landingSelector) : null;
+    if (banner && !slot) {
+      const progress = clamp(-banner.getBoundingClientRect().top / banner.clientHeight, 0, 1);
+      m.scroll = THREE.MathUtils.damp(m.scroll, progress, 10, dt);
+    }
+
+    // Journey and landing (part 01b). One smoothed scroll distance drives it
+    // all, so it reverses when scrolling back up and trails a fast flick:
+    // - the banner leaves and he lets go of the pointer, drifting to the
+    //   middle-right (`enter`);
+    // - the space journey plays (`j`, see space-journey.ts): rocket,
+    //   asteroids, the planet he circles, the UFO;
+    // - the last screen is the landing (`p`): to the landing spot with a
+    //   frontflip, a soft touchdown, a hold in the middle of the screen until
+    //   the spot arrives, then a ride off the top on it.
+    let landX = 0;
+    let landY = 0;
+    let p = 0;
+    let j = 0;
+    let enter = 0;
+    let slotY = h * 2;
+    if (slot && banner) {
+      const spot = slot.getBoundingClientRect();
+      const block = (slot.parentElement ?? slot).getBoundingClientRect();
+      // Where the spot sits when its block is centered on screen.
+      const hold = Math.max(insetTop, (h - block.height) / 2) + (spot.top - block.top) + spot.height / 2;
+      const spotY = spot.top - rect.top + spot.height / 2;
+      slotY = spotY;
+      landX = spot.left - rect.left + spot.width / 2;
+      landY = Math.min(hold, spotY);
+      const scrolled = Math.max(0, -banner.getBoundingClientRect().top);
+      const total = scrolled + Math.max(0, spotY - hold);
+      m.scrolled = THREE.MathUtils.damp(m.scrolled, scrolled, LANDING_LAG, dt);
+      if (Math.abs(m.scrolled - scrolled) < 0.5) m.scrolled = scrolled;
+      const landingFrom = Math.max(h * 0.6, total - h * 1.1);
+      const journeyFrom = h * 0.45;
+      enter = easeInOut(range(m.scrolled, 0, h * 0.6));
+      j = landingFrom > journeyFrom ? range(m.scrolled, journeyFrom, landingFrom) : enter;
+      p = range(m.scrolled, landingFrom, total);
+      m.landing = total > 0 ? clamp(m.scrolled / total, 0, 1) : 0;
+    }
+    m.enter = enter;
+    const travel = easeInOut(range(p, 0.05, 0.75));
+    const landFlip = easeInOut(range(p, 0.15, 0.7));
+    const landTuck = bump(range(p, 0.18, 0.66)) ** 1.5;
+    const settled = range(p, 0.7, 1);
+    // A soft knee bend as his feet meet the spot, springing back.
+    const touchdown = bump(range(p, 0.82, 1));
+
+    // Where the journey has him, in canvas px and depth.
+    const aspect = w / h;
+    const K = novaH * unit;
+    const path = novaAt(j, aspect, K, journeyCue.current);
+    // Full size on the journey, smaller while circling the planet, then the landing size.
+    const size = THREE.MathUtils.lerp(1 + (path.scale - 1) * enter, LANDING_SIZE, travel);
+    const journeyX = path.fx * w;
+    const journeyY = path.fy * h;
+    const shared = journeyState.current;
+    Object.assign(shared, {
+      j: j > 0 && enter > 0 ? j : 0,
+      K,
+      lite: w < 768,
+      novaFy: path.fy,
+      tiltX: m.tiltX,
+      tiltY: m.tiltY,
+      novaFeetFy: path.fy + (novaH * path.scale * 0.5) / h,
+      p,
+      spotFx: landX / w,
+      spotFy: slotY / h,
+    });
+
+    // Zero-g float on top of everything, at every stage.
+    const bobX = wobble(time * 0.55, 21) * novaH * 0.04 * size;
+    const bobY = wobble(time * 0.8, 22) * novaH * 0.06 * size;
+    const bannerX = m.position.x;
+    const bannerY = m.position.y - s.lift * novaH;
+    const baseX = THREE.MathUtils.lerp(THREE.MathUtils.lerp(bannerX, journeyX, enter), landX, travel);
+    const baseY = THREE.MathUtils.lerp(THREE.MathUtils.lerp(bannerY, journeyY, enter), landY, travel);
+    const drawZ = path.z * enter * (1 - travel);
+    // Tilt nudges him on the journey too, a little less than the scene around him.
+    const drawX = baseX + bobX + m.tiltX * novaH * 0.18 * enter * (1 - travel);
+    const lifted = baseY + bobY + m.tiltY * novaH * 0.12 * enter * (1 - travel);
+    const drawY = lifted - m.scroll * (lifted + novaH * 1.2);
+
+    // His attitude follows how he actually moves on screen, so the journey
+    // and the ride off the top drag his limbs like any other move.
+    if (m.drawn.lengthSq()) {
+      m.drawnVelocity.x = THREE.MathUtils.damp(m.drawnVelocity.x, (drawX - m.drawn.x) / dt, 10, dt);
+      m.drawnVelocity.y = THREE.MathUtils.damp(m.drawnVelocity.y, (drawY - m.drawn.y) / dt, 10, dt);
+    }
+    m.drawn.set(drawX, drawY);
+    const vx = THREE.MathUtils.lerp(m.velocity.x, m.drawnVelocity.x, enter);
+    const vy = THREE.MathUtils.lerp(m.velocity.y, m.drawnVelocity.y, enter);
+
     // Body attitude from velocity (px per second), smoothed.
-    const vx = m.velocity.x;
-    const vy = m.velocity.y;
     // Acceleration drives follow-through: limbs swing against sudden changes.
     m.acceleration.x = THREE.MathUtils.damp(m.acceleration.x, (vx - m.previousVelocity.x) / dt, 8, dt);
     m.acceleration.y = THREE.MathUtils.damp(m.acceleration.y, (vy - m.previousVelocity.y) / dt, 8, dt);
     m.previousVelocity.set(vx, vy);
     // During the entrance the timeline sets his heading, so no banking from speed.
     const steer = e.active ? 0 : 1;
-    m.bank = THREE.MathUtils.damp(m.bank, clamp(-vx * 0.0011, -0.55, 0.55) * steer, 6, dt);
+    // Phones: he also leans into the tilt, like a passenger.
+    m.bank = THREE.MathUtils.damp(m.bank, clamp(-vx * 0.0011 - m.tiltX * 0.35, -0.55, 0.55) * steer, 6, dt);
     m.pitch = THREE.MathUtils.damp(m.pitch, clamp(vy * 0.0007, -0.4, 0.4) * steer, 6, dt);
-    const yawGoal = following ? clamp(((px - m.position.x) / w) * 1.6, -0.6, 0.6) : clamp(vx * 0.0012, -0.5, 0.5);
-    m.yaw = THREE.MathUtils.damp(m.yaw, yawGoal, 3, dt);
+    // On the journey he looks at what is happening around him; otherwise the
+    // pointer when it moves, or ahead of himself.
+    const sceneLook = path.lookX !== null && path.lookY !== null && enter > 0.5 && travel < 0.5;
+    const tiltLook = !sceneLook && !watching && Math.abs(m.tiltX) + Math.abs(m.tiltY) > 0.04;
+    const lookAtX = sceneLook ? path.lookX! * w : tiltLook ? drawX + m.tiltX * w * 0.6 : px;
+    const lookAtY = sceneLook ? path.lookY! * h : tiltLook ? drawY + m.tiltY * h * 0.6 : py;
+    const looking = sceneLook || watching || tiltLook;
+    const yawGoal = looking ? clamp(((lookAtX - drawX) / w) * 1.6, -0.6, 0.6) : clamp(vx * 0.0012, -0.5, 0.5);
+    // Landed, he turns mostly his head, not his whole body.
+    m.yaw = THREE.MathUtils.damp(m.yaw, yawGoal * (1 - settled * 0.6), 3, dt);
     m.tumble = THREE.MathUtils.damp(m.tumble, 0, 1.4, dt);
 
-    // Where he looks: the pointer when it moves, otherwise ahead of himself.
-    const lookGoalX = following ? (px - m.position.x) / w : clamp(vx * 0.002, -0.3, 0.3);
-    const lookGoalY = following ? (py - m.position.y) / h : 0;
+    const lookGoalX = looking ? (lookAtX - drawX) / w : clamp(vx * 0.002, -0.3, 0.3);
+    const lookGoalY = looking ? (lookAtY - drawY) / h : 0;
     m.lookX = THREE.MathUtils.damp(m.lookX, clamp(lookGoalX * 2, -1, 1), 5, dt);
     m.lookY = THREE.MathUtils.damp(m.lookY, clamp(lookGoalY * 2, -1, 1), 5, dt);
 
-    // Scroll-out (page mode): float up and off as the banner leaves.
-    if (mode === "page" && scrollOutSelector) {
-      const banner = document.querySelector(scrollOutSelector);
-      const progress = banner ? clamp(-banner.getBoundingClientRect().top / banner.clientHeight, 0, 1) : 0;
-      m.scroll = THREE.MathUtils.damp(m.scroll, progress, 10, dt);
-    }
-
-    // Zero-g float on top of everything.
-    const bobX = wobble(time * 0.55, 21) * novaH * 0.04;
-    const bobY = wobble(time * 0.8, 22) * novaH * 0.06;
-    const drawX = m.position.x + bobX;
-    const lifted = m.position.y + bobY - s.lift * novaH;
-    const drawY = lifted - m.scroll * (lifted + novaH * 1.2);
-
-    group.position.set((drawX - w / 2) * unit, -(drawY - h / 2) * unit, 0);
+    toWorld(drawX / w, drawY / h, drawZ, aspect, group.position);
+    shared.nova.copy(group.position);
 
     // The tag rides beside his shoulder, once he has arrived and until he leaves.
     const label = tagElement.current;
@@ -543,21 +713,23 @@ function Nova({
       const right = drawX + novaW * 0.42;
       const x = right + label.offsetWidth + 12 <= w ? right : drawX - novaW * 0.42 - label.offsetWidth;
       label.style.transform = `translate3d(${x}px, ${drawY - novaH * 0.32}px, 0)`;
-      const shown = !e.active && m.scroll < 0.12 ? "1" : "0";
+      const shown = !e.active && m.scroll < 0.12 && enter < 0.03 ? "1" : "0";
       if (label.dataset.shown !== shown) label.dataset.shown = shown;
     }
     group.userData.baseScale = (novaH * unit) / MODEL_HEIGHT;
     // Depth: the entrance zoom, and a slight drift toward and away from the screen.
     const depth = e.active ? e.zoom : 1 + wobble(time * 0.3, 24) * 0.04;
-    group.scale.setScalar(group.userData.baseScale * depth);
+    group.scale.setScalar(group.userData.baseScale * depth * size);
     // Whole-body drift: slow, never-repeating roll, pitch and turn on top of the motion.
-    // Kept low during the entrance so he faces the user as he arrives and waves.
-    const drift = e.active ? 0.25 : following ? 0.5 : 1;
+    // Kept low during the entrance so he faces the user as he arrives and waves,
+    // and a little lower once landed so he reads as standing, still afloat.
+    const drift = (e.active ? 0.25 : following ? 0.5 : 1) * (1 - settled * 0.35);
     // A slow sweep turns him far enough to show his side now and then.
     const turn = wobble(time * 0.4, 2) * 0.3 + wobble(time * 0.13, 23) * 0.75;
+    const journeyOn = enter * (1 - travel);
     group.rotation.set(
-      m.pitch + (e.active ? e.pitch : 0) + s.flip * TURN + wobble(time * 0.5, 1) * 0.15 * drift,
-      m.yaw + s.spin * TURN + turn * drift,
+      m.pitch + (e.active ? e.pitch : 0) + (s.flip + landFlip) * TURN + wobble(time * 0.5, 1) * 0.15 * drift,
+      m.yaw + (s.spin + path.spin * journeyOn) * TURN + turn * drift * (1 - settled * 0.5),
       m.bank + m.tumble + s.roll * TURN + wobble(time * 0.6, 3) * 0.2 * drift + m.scroll * 0.5,
     );
     group.updateMatrixWorld();
@@ -571,9 +743,15 @@ function Nova({
     // Flying pose during the entrance: arms tight along the body, legs
     // together and trailing, head up into the flight.
     const fly = e.active ? e.fly : 0;
-    const idle = (following ? 0.6 : 1) * (1 - fly);
+    // Landed, the swim kick calms down but never stops: he is still afloat.
+    const idle = (following ? 0.6 : 1) * (1 - fly) * (1 - settled * 0.45);
     const breath = Math.sin(time * 1.5);
-    const tuck = s.tuck;
+    const journeyOnPose = enter * (1 - travel);
+    const tuck = Math.max(s.tuck, landTuck, path.tuck * journeyOnPose);
+    const kickOff = path.kick * journeyOnPose;
+    // Waving: his own wave trick, or waving back at the alien.
+    const waving = Math.max(s.wave, path.wave * journeyOnPose);
+    const armRaise = Math.max(s.armR, path.wave * journeyOnPose);
     const spring = (key: string, target: number, stiffness = 26, damping = 0.42) =>
       springTo((m.springs[key] ??= { value: 0, velocity: 0 }), target, stiffness, damping, dt);
 
@@ -612,30 +790,30 @@ function Nova({
     const trail = Math.sin(time * WAVE_SPEED - 0.7);
     // Biased outward: the forearm swings between upright and leaning out,
     // never across the helmet.
-    const wave = s.wave * swing * 0.28;
-    const armLz = spring("armLz", raise(0.22 + wobble(time * 0.8, 7) * 0.2 * idle + dragY * 0.6 + whipY * 0.5 + s.armL * 1.3 - tuck * 0.1 - fly * 0.6) + dragX * (1 - fly) + whipX * (1 - fly), 22, 0.35);
-    const armRz = spring("armRz", -raise(0.22 + wobble(time * 0.8, 8) * 0.2 * idle + dragY * 0.6 + whipY * 0.5 + s.armR * 1.3 - s.wave * 0.15 - tuck * 0.1 - fly * 0.6) - s.wave * swing * 0.06 + dragX * (1 - fly) + whipX * (1 - fly), 22, 0.35);
+    const wave = waving * swing * 0.28;
+    const armLz = spring("armLz", raise(0.22 + wobble(time * 0.8, 7) * 0.2 * idle + dragY * 0.6 + whipY * 0.5 + s.armL * 1.3 + touchdown * 0.35 - tuck * 0.1 - fly * 0.6) + dragX * (1 - fly) + whipX * (1 - fly), 22, 0.35);
+    const armRz = spring("armRz", -raise(0.22 + wobble(time * 0.8, 8) * 0.2 * idle + dragY * 0.6 + whipY * 0.5 + armRaise * 1.3 + touchdown * 0.35 - waving * 0.15 - tuck * 0.1 - fly * 0.6) - waving * swing * 0.06 + dragX * (1 - fly) + whipX * (1 - fly), 22, 0.35);
     const armLx = spring("armLx", stroke * 0.2 * idle + wobble(time * 0.7, 9) * 0.1 - tuck * 0.25, 20, 0.4);
     const armRx = spring("armRx", -stroke * 0.2 * idle + wobble(time * 0.7, 10) * 0.1 - tuck * 0.25, 20, 0.4);
     poseBone(b.armL1, rest, group, [[AXIS.z, armLz - ARM_REST_LIFT], [AXIS.x, armLx]]);
     poseBone(b.armR1, rest, group, [[AXIS.z, armRz + ARM_REST_LIFT], [AXIS.x, armRx]]);
     // Elbows stay nearly straight: he reads as a soft toy, not a jointed figure.
     const elbowL = spring("elbowL", 0.1 + wobble(time, 11) * 0.06 * idle + tuck * 0.15 + Math.max(0, stroke) * 0.04 * idle - fly * 0.1, 30, 0.35);
-    const elbowR = spring("elbowR", 0.1 + wobble(time, 12) * 0.06 * idle + tuck * 0.15 + Math.max(0, -stroke) * 0.04 * idle + s.wave * 0.62 - fly * 0.1, 30, 0.35);
+    const elbowR = spring("elbowR", 0.1 + wobble(time, 12) * 0.06 * idle + tuck * 0.15 + Math.max(0, -stroke) * 0.04 * idle + waving * 0.62 - fly * 0.1, 30, 0.35);
     poseBone(b.armL2, rest, group, [[AXIS.z, elbowL]]);
     poseBone(b.armR2, rest, group, [[AXIS.z, -(elbowR + wave)]]);
     poseBone(b.handL, rest, group, [[AXIS.z, spring("handL", wobble(time * 1.2, 13) * 0.35 + whipX * 0.4, 40, 0.3)]]);
     poseBone(b.handR, rest, group, [
-      [AXIS.y, s.wave * 1.2],
-      [AXIS.z, spring("handR", wobble(time * 1.2, 14) * 0.35 * (1 - s.wave) + whipX * 0.4 - s.wave * trail * 0.25, 40, 0.3)],
+      [AXIS.y, waving * 1.2],
+      [AXIS.z, spring("handR", wobble(time * 1.2, 14) * 0.35 * (1 - waving) + whipX * 0.4 - waving * trail * 0.25, 40, 0.3)],
     ]);
-    poseBone(b.fingersR, rest, group, [[AXIS.x, -s.wave * 1.0]]);
+    poseBone(b.fingersR, rest, group, [[AXIS.x, -waving * 1.0]]);
     // Turning the palm forward swings the thumb root into the cuff: the hand
     // slides a little out of the sleeve, and the thumb moves up the hand,
     // clear of the cuff, and angles outward.
     // Full strength early (the palm turns as the wave starts), so the thumb
     // is already clear while the wave eases in and out.
-    const clear = Math.min(1, s.wave * 3);
+    const clear = Math.min(1, waving * 3);
     b.handR.position.copy(handOffset).multiplyScalar(1 + clear * WAVE_HAND_REACH);
     b.thumbR.position.copy(thumbOffset).addScaledVector(b.fingersR.position, clear * WAVE_THUMB_LIFT);
     poseBone(b.thumbR, rest, group, [[AXIS.y, clear * 0.55]]);
@@ -644,15 +822,16 @@ function Nova({
     // motion; tucked in during flips.
     const kick = Math.sin(time * 1.6);
     const spread = 0.1 + wobble(time * 0.6, 15) * 0.08;
-    const legL = spring("legL", -kick * 0.36 * idle - tuck * 0.95 - (dragY * 0.25 + whipY * 0.3) * (1 - fly) + fly * 0.2, 20, 0.4);
-    const legR = spring("legR", kick * 0.36 * idle - tuck * 0.95 - (dragY * 0.25 + whipY * 0.3) * (1 - fly) + fly * 0.2, 20, 0.4);
-    const together = spread * (1 - fly) - fly * 0.04;
+    // Touching down, the hips fold a little forward as the knees bend.
+    const legL = spring("legL", -kick * 0.36 * idle - tuck * 0.95 - touchdown * 0.22 + kickOff * 0.35 - (dragY * 0.25 + whipY * 0.3) * (1 - fly) + fly * 0.2, 20, 0.4);
+    const legR = spring("legR", kick * 0.36 * idle - tuck * 0.95 - touchdown * 0.22 + kickOff * 0.35 - (dragY * 0.25 + whipY * 0.3) * (1 - fly) + fly * 0.2, 20, 0.4);
+    const together = spread * (1 - fly) * (1 - settled * 0.4) - fly * 0.04;
     const legLz = spring("legLz", together + (dragX * 0.9 + whipX * 0.6) * (1 - fly), 18, 0.4);
     const legRz = spring("legRz", -together + (dragX * 0.9 + whipX * 0.6) * (1 - fly), 18, 0.4);
     poseBone(b.legL, rest, group, [[AXIS.x, legL], [AXIS.z, legLz]]);
     poseBone(b.legR, rest, group, [[AXIS.x, legR], [AXIS.z, legRz]]);
-    poseBone(b.legL2, rest, group, [[AXIS.x, spring("kneeL", 0.15 + Math.max(0, kick) * 0.45 * idle + tuck * 1.2 + fly * 0.05, 26, 0.4)]]);
-    poseBone(b.legR2, rest, group, [[AXIS.x, spring("kneeR", 0.15 + Math.max(0, -kick) * 0.45 * idle + tuck * 1.2 + fly * 0.05, 26, 0.4)]]);
+    poseBone(b.legL2, rest, group, [[AXIS.x, spring("kneeL", 0.15 + Math.max(0, kick) * 0.45 * idle + tuck * 1.2 + touchdown * 0.5 + fly * 0.05, 26, 0.4)]]);
+    poseBone(b.legR2, rest, group, [[AXIS.x, spring("kneeR", 0.15 + Math.max(0, -kick) * 0.45 * idle + tuck * 1.2 + touchdown * 0.5 + fly * 0.05, 26, 0.4)]]);
 
     // Antenna: each segment springs after the one below it.
     const antennaGoal = clamp(vx * 0.0016 + m.bank * 0.4, -0.7, 0.7);
@@ -696,23 +875,25 @@ class NovaBoundary extends Component<{ children: ReactNode; onFail?: (reason: st
 
 /** The 3D canvas with Nova. Loaded lazily by NovaLayer; never server-rendered. */
 export default function NovaStage(props: NovaStageProps) {
-  const { mode = "page", scrollOutSelector } = props;
+  const { mode = "page", scrollOutSelector, landingSelector } = props;
   const [active, setActive] = useState(true);
+  const journey = useRef<JourneyState>(createJourneyState());
 
   // Stop rendering once the banner has scrolled away (page mode).
   useEffect(() => {
     if (mode !== "page" || !scrollOutSelector) return;
     const update = () => {
-      const banner = document.querySelector(scrollOutSelector);
-      if (!banner) return;
-      // Keep rendering a little past the banner so a fast scroll never
-      // freezes him half visible; by then he is fully off screen.
-      setActive(banner.getBoundingClientRect().bottom > -window.innerHeight * 0.6);
+      // With a landing spot he rides it off the top; otherwise he leaves with the banner.
+      const until = (landingSelector && document.querySelector(landingSelector)) || document.querySelector(scrollOutSelector);
+      if (!until) return;
+      // Keep rendering a little past it so a fast scroll never freezes him
+      // half visible; by then he is fully off screen.
+      setActive(until.getBoundingClientRect().bottom > -window.innerHeight * 0.6);
     };
     update();
     window.addEventListener("scroll", update, { passive: true });
     return () => window.removeEventListener("scroll", update);
-  }, [mode, scrollOutSelector]);
+  }, [mode, scrollOutSelector, landingSelector]);
 
   return (
     <NovaBoundary onFail={props.onFail}>
@@ -729,13 +910,14 @@ export default function NovaStage(props: NovaStageProps) {
       frameloop={active ? "always" : "never"}
       dpr={[1, 2]}
       gl={{ antialias: true, alpha: true, toneMappingExposure: 1.05 }}
-      camera={{ fov: 30, position: [0, 0, 10], near: 0.1, far: 50 }}
+      camera={{ fov: CAMERA_FOV, position: [0, 0, CAMERA_Z], near: 0.1, far: 50 }}
       aria-hidden
     >
       <Studio />
       <NovaBoundary onFail={props.onFail}>
         <Suspense fallback={null}>
-          <Nova {...props} />
+          <Nova {...props} journey={journey} />
+          {mode === "page" && landingSelector && <SpaceCast journey={journey} />}
         </Suspense>
       </NovaBoundary>
     </Canvas>

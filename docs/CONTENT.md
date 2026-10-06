@@ -14,6 +14,12 @@ The reference opens most sections with a two-line sentence above the headline (a
 - Button: Scroll
 - Retired with direction F: the lead "Strategy, brands and websites / made in Dallas, TX", the headline WE GROW / BRANDS / ASTRONOMICALLY and the "Discover more" link.
 
+**1b. About** (legacy site copy, the live site's About block)
+- Eyebrow: About Skyline
+- Heading: ABOUT
+- Body: Through expert strategy and genius thinking, we launch and **grow brands**, both national and global, as well as help startups that need to punch above their weight.
+- Button: Get to Know Us
+
 **2. Logos**
 - No copy. Accessible label: "Brands we've worked with".
 

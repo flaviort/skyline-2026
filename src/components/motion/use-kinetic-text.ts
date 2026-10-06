@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, type RefObject } from "react";
-import { gsap, SplitText, useGSAP } from "@/lib/gsap";
+import { gsap, ScrollTrigger, SplitText, useGSAP } from "@/lib/gsap";
 import { pointer, trackPointer } from "@/lib/pointer";
 import { whenPageReady } from "@/lib/page-ready";
 
@@ -12,6 +12,8 @@ export type RevealOptions = {
   delay?: number;
   /** Seconds between lines; characters use a quarter of it, like the reference */
   stagger?: number;
+  /** Wait until the text scrolls into view (its top at 85% of the viewport) instead of playing on page load */
+  scroll?: boolean;
 };
 
 export type WeightOptions = {
@@ -97,7 +99,10 @@ export function useKineticText<T extends HTMLElement>(
           let chars: Char[] = [];
           const radius = (weight && weight.radius) || 400;
           let weightLive = false;
+          // Ready once the page cue has fired and, for scroll reveals, the text is in view.
           let ready = false;
+          let pageReady = false;
+          let inView = !(reveal && reveal.scroll);
           let revealTween: gsap.core.Tween | null = null;
 
           const finish = () => {
@@ -188,12 +193,28 @@ export function useKineticText<T extends HTMLElement>(
           // Start the entrance once the page is ready (fonts loaded; part 11
           // will hand this over to the page transition).
           let cancelled = false;
-          whenPageReady().then(() => {
-            if (cancelled) return;
+          const start = () => {
+            if (cancelled || ready || !pageReady || !inView) return;
             ready = true;
             if (revealTween) revealTween.play();
             else finish();
+          };
+          whenPageReady().then(() => {
+            pageReady = true;
+            start();
           });
+          const trigger =
+            reveal && reveal.scroll
+              ? ScrollTrigger.create({
+                  trigger: root,
+                  start: "top 85%",
+                  once: true,
+                  onEnter: () => {
+                    inView = true;
+                    start();
+                  },
+                })
+              : null;
 
           if (useWeight) {
             trackPointer();
@@ -204,6 +225,7 @@ export function useKineticText<T extends HTMLElement>(
 
           return () => {
             cancelled = true;
+            trigger?.kill();
             gsap.ticker.remove(tick);
             window.removeEventListener("resize", measure);
             for (const c of chars) {

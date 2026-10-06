@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { Section } from "@/components/layout/section";
+import { Eyebrow } from "@/components/type/eyebrow";
 import { Heading } from "@/components/type/heading";
 import { Lead } from "@/components/type/lead";
 import { ArrowChip, type ChipColor } from "@/components/ui/arrow-chip";
@@ -62,10 +63,15 @@ export default function LabPage() {
         </div>
       </Entry>
 
-      <Entry name="PillButton" note="Hover: grows, dots spin, label rolls">
-        <div>
+      <Entry name="PillButton" note="Hover: grows, dots spin, label rolls. Black (menu) and orange large (in-page action)">
+        <div className="flex flex-wrap items-center gap-8">
           <PillButton href="#nova" label="Contact" />
+          <PillButton href="#nova" label="Get to Know Us" tone="orange" size="l" />
         </div>
+      </Entry>
+
+      <Entry name="Eyebrow" note="Muted uppercase label above a heading; reveals when scrolled into view">
+        <Eyebrow>About Skyline</Eyebrow>
       </Entry>
 
       <Entry name="DrawLineLink" note="Hover: a new squiggle draws each time">

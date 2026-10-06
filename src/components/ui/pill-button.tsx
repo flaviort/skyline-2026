@@ -9,6 +9,10 @@ type PillButtonProps = {
   label: string;
   /** How many px the button grows on hover, width and height */
   grow?: [number, number];
+  /** `black`: the menu's Contact button. `orange`: primary action on the page, ink text and dots (Q17) */
+  tone?: "black" | "orange";
+  /** `m`: menu size. `l`: in-page call to action */
+  size?: "m" | "l";
   className?: string;
 };
 
@@ -17,7 +21,7 @@ type PillButtonProps = {
  * a few px, its dot spins out while new ones spin in, and the label rolls
  * up to a copy of itself. Styles live in globals.css (`.pill-button`).
  */
-export function PillButton({ href, label, grow = [12, 6], className }: PillButtonProps) {
+export function PillButton({ href, label, grow = [12, 6], tone = "black", size = "m", className }: PillButtonProps) {
   const root = useRef<HTMLAnchorElement>(null);
 
   // Growth is a scale, so it needs the button's size: px in, scale factors out.
@@ -37,7 +41,7 @@ export function PillButton({ href, label, grow = [12, 6], className }: PillButto
   }, [grow]);
 
   return (
-    <Link ref={root} href={href} className={cn("pill-button", className)}>
+    <Link ref={root} href={href} className={cn("pill-button", tone === "orange" && "pill-button--orange", size === "l" && "pill-button--large", className)}>
       <span className="pill-button__dots" aria-hidden>
         <span className="pill-button__dot" />
         <span className="pill-button__dot pill-button__dot--in" style={{ "--i": 0 } as CSSProperties} />

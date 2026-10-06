@@ -42,6 +42,7 @@ Homepage, one part at a time. Status: `todo`, `spec` (written, waiting for appro
 | # | Part | What it covers | Status |
 |---|---|---|---|
 | 1 | [Banner](specs/home/01-banner.md) | Hero: serif lead, headline, Discover more link, 3D Nova floating around and following the mouse | review |
+| 1b | [About, Nova lands](specs/home/01b-about.md) | Old site's About copy, centered; Nova frontflips to the middle of the screen on scroll and lands on the heading (added 2026-10-05); round 2 adds a scroll-driven space journey before the landing | review |
 | 2 | [Logos](specs/home/02-logos.md) | Client logo marquee under the banner, scroll-direction speed | spec |
 | 3 | [Agency / about](specs/home/03-agency.md) | Office photo collage and the agency story, "More about us" | spec |
 | 4 | [Recent projects](specs/home/04-recent-projects.md) | Dark band, pinned stack of framed project cards from the 6 real cases, rotating badge | spec |

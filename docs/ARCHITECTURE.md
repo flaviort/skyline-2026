@@ -30,9 +30,9 @@ src/
     providers/            SmoothScroll (Lenis on the GSAP ticker)
     layout/               Section, Menu, NavPill, MobileMenu, Footer, ContactCta, PageTransition,
                           TransitionLink, ScatterLayout, StickySteps, SwipeRow
-    sections/home/        Banner, Logos, Agency, RecentProjects, WhatWeDo, Collage,
+    sections/home/        Banner, About, Logos, Agency, RecentProjects, WhatWeDo, Collage,
                           ContactCta (one file per part, in build order)
-    type/                 Heading, Lead
+    type/                 Heading, Lead, Eyebrow
     ui/                   Button, ArrowChip, DrawLineLink, PillButton, LogoMark, IconButton, Media, Frame, Polaroid,
                           Sticker, Badge, Marquee
     cards/                ProjectCard, ServiceCard
@@ -137,7 +137,8 @@ Built or extended part by part; the "First needed" column follows the build orde
 |---|---|---|---|
 | `Heading` | `as`, `size` (`xxl` to `xxs`), `lines: { text, serif? }[]`, `reveal`, `weightHover` | 1 Banner | every section headline, contact CTA, internal pages |
 | `Lead` | `lines: string[]`, `size` | 1 Banner | agency, projects, CTA |
-| `useKineticText` (hook) | `reveal` (`split`: lines or chars, `delay`, `stagger`), `weight` (sans and serif rest/near weights, `radius`), `targets` | 1 Banner | `Heading`, `Lead`, any text. One SplitText instance drives both the masked reveal and the cursor weight effect (defaults 700/200 for bold lines, 150/700 for the accent line, 400px), so they never fight over the split |
+| `Eyebrow` | `children`, `as`, `reveal` (scroll reveal by default) | 1b About | small muted uppercase label above any heading; `readout` type style |
+| `useKineticText` (hook) | `reveal` (`split`: lines or chars, `delay`, `stagger`, `scroll`: wait until the text's top is at 85% of the viewport), `weight` (sans and serif rest/near weights, `radius`), `targets` | 1 Banner | `Heading`, `Lead`, any text. One SplitText instance drives both the masked reveal and the cursor weight effect (defaults 700/200 for bold lines, 150/700 for the accent line, 400px), so they never fight over the split |
 | `ScrollReveal` | `group`, `stagger`, `start`, `mode` (`lines`, `chars`, `element`) | 3 Agency | all sections |
 | `WordSwap` | `words`, `hold`, `firstHold`, `delay` (after the cover is gone), `reveal` (`land`, `block`), `listClassName` | 1 Banner (F) | any cycling word; letters lift off and land, weight ignites 150 to 800; pauses off screen |
 | `Starfield` | `className` | 1 Banner (F) | fixed behind every page from the root layout; scroll-reactive stars from the old site on one 2D canvas (constant drift, scroll adds lagged speed, wraps on long pages) |
@@ -156,7 +157,7 @@ Built or extended part by part; the "First needed" column follows the build orde
 | `DrawLineLink` | `href`, `label`, `color`, `chip`, `persist`, `variant` (`default`, `menu`: 12px uppercase, no chip, `aria-current` when persisted) | 1 Banner | menu links, services, part 6, footer, internal pages |
 | `Icon` | `name`, `size`, `title` | 1 Banner | every icon on the site |
 | `IconButton` | `icon`, `label`, `onClick` | 8 Footer | scroll to top, menu toggle, slider controls |
-| `PillButton` | `href`, `label`, `grow` (px, `[x, y]`) | 9 Menu | the menu's Contact button; any small boxed CTA. Black box, orange dot; styles in `globals.css` (`.pill-button`) |
+| `PillButton` | `href`, `label`, `grow` (px, `[x, y]`), `tone` (`black`, `orange`), `size` (`m`, `l`) | 9 Menu | the menu's Contact button (black), in-page actions like the about section's Get to Know Us (orange, large, ink text and dots). Styles in `globals.css` (`.pill-button`) |
 | `ScrollCue` | `href`, `label` | 1 Banner (F) | round Scroll button with orange ripple rings (`.scroll-cue` in `globals.css`) |
 | `Readout` | `coordinates`, `place`, `timeZone` | 1 Banner (F) | location and live time line; the `readout` utility is the type style |
 | `LogoMark` | `className` (size and color via text color) | 9 Menu | menu, favicon-sized marks, footer if needed |
@@ -193,8 +194,9 @@ Built or extended part by part; the "First needed" column follows the build orde
 
 | Component | Key props | First needed | Reused in |
 |---|---|---|---|
-| `NovaLayer` | `scenes` (`banner`, `goodbye`), `avoid`, `bounds` | 1 Banner | 8 Footer (goodbye), 404 page |
+| `NovaLayer` | `scrollOutSelector`, `landingSelector` (the spot he frontflips to and rides off with, part 01b; `NOVA_LANDING` in `src/lib/nova-landing.ts`). Sets `--nova-h` and `data-nova="still"` on the root for the page's own still image | 1 Banner | 8 Footer (goodbye), 404 page |
 | `Nova` | `state`, `target`, `lookAt`, `trick` | 1 Banner | inside `NovaLayer` |
+| `SpaceCast` | `journey` (shared state: progress `j`, Nova's size, place and feet) | 1b About | the space journey's objects on Nova's canvas; timeline in `space-journey.ts` (pure functions of `j`), one builder per object so a designer model can replace one |
 | `novaTricks` | backflip, frontflip, barrel roll, spin, stretch, look around, wave | 1 Banner | goodbye wave in part 08 |
 | `nova-look` (module) | studio environment, rim lights, material overrides | 1 Banner | every Nova |
 | `CursorTrail` | `items`, `spacing` (viewport width / 8), `pop`, `drift`, `lifetime` | 7 Contact CTA | about hero, anywhere a sticker spill is wanted |

@@ -22,6 +22,8 @@ const TABLET_REGION: [number, number] = [0.5, 0.98];
 type NovaLayerProps = {
   /** Element whose scroll-out sends Nova away, also where the still pose sits */
   scrollOutSelector?: string;
+  /** Element he lands on as the banner leaves (part 01b); without it he floats away */
+  landingSelector?: string;
 };
 
 type Metrics = { height: number; insetTop: number; insetBottom: number; wide: boolean; region: [number, number] };
@@ -89,7 +91,7 @@ function missingSupport(): string | null {
  * text. Reduced motion, missing support, a failed scene or a model that
  * does not show up within SHOW_TIMEOUT all get the still pose instead.
  */
-export function NovaLayer({ scrollOutSelector = "#banner" }: NovaLayerProps) {
+export function NovaLayer({ scrollOutSelector = "#banner", landingSelector }: NovaLayerProps) {
   const reducedMotion = useReducedMotion();
   const finePointer = useFinePointer();
   const metrics = useSyncExternalStore(subscribeResize, metricsSnapshot, () => null);
@@ -133,9 +135,20 @@ export function NovaLayer({ scrollOutSelector = "#banner" }: NovaLayerProps) {
     return () => window.clearTimeout(timer);
   }, [status]);
 
+  // The page sizes the landing spot from his height, and shows its own still
+  // Nova there when the 3D one is not running.
+  const still = reducedMotion || status === "still";
+  useEffect(() => {
+    if (!metrics) return;
+    const root = document.documentElement;
+    root.style.setProperty("--nova-h", `${metrics.height}px`);
+    if (still) root.dataset.nova = "still";
+    else delete root.dataset.nova;
+  }, [metrics, still]);
+
   if (!metrics) return null;
 
-  if (reducedMotion || status === "still") {
+  if (still) {
     return (
       <Image
         src="/images/legacy/nova.png"
@@ -156,6 +169,7 @@ export function NovaLayer({ scrollOutSelector = "#banner" }: NovaLayerProps) {
       <NovaStage
         mode="page"
         scrollOutSelector={scrollOutSelector}
+        landingSelector={landingSelector}
         height={metrics.height}
         insetTop={metrics.insetTop}
         insetBottom={metrics.insetBottom}
