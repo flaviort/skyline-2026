@@ -15,7 +15,7 @@ export const banner = {
     timeZone: "America/Chicago",
   },
   nova: { name: "Nova / EVA-01", status: "Orbit stable" },
-  scroll: { label: "Scroll", href: "#journey" },
+  scroll: { label: "Scroll", href: "#about", duration: 6 },
 };
 
 // Part 01b. Legacy site copy (the live site's About block).

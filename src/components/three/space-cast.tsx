@@ -65,6 +65,31 @@ const COLORS = {
   alien: "#7bd94a",
 };
 
+function crystal(color: string, tint: string, environment: THREE.Texture) {
+  return new THREE.MeshPhysicalMaterial({
+    color,
+    metalness: 0,
+    roughness: 0.04,
+    // Partly see-through: full transmission shows the black behind and reads dark.
+    transmission: 0.55,
+    thickness: 0.7,
+    ior: 1.6,
+    dispersion: 5,
+    attenuationColor: tint,
+    attenuationDistance: 0.9,
+    iridescence: 1,
+    iridescenceIOR: 1.35,
+    clearcoat: 1,
+    clearcoatRoughness: 0.02,
+    specularIntensity: 1,
+    emissive: tint,
+    emissiveIntensity: 0.6,
+    envMap: environment,
+    envMapIntensity: 2.4,
+    flatShading: true,
+  });
+}
+
 function lacquer(color: string, environment: THREE.Texture, roughness = 0.38) {
   return new THREE.MeshPhysicalMaterial({ color, roughness, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.08, envMap: environment });
 }
@@ -90,12 +115,10 @@ function createMaterials(environment: THREE.Texture) {
   return {
     white: lacquer(COLORS.white, environment),
     orange: lacquer(COLORS.orange, environment),
-    cobalt: lacquer(COLORS.cobalt, environment, 0.3),
     lilac: lacquer(COLORS.lilac, environment),
     visor: lacquer(COLORS.visor, environment),
     ink: lacquer(COLORS.ink, environment, 0.3),
     // Matte clay, not lacquer: a rock should not shine like the suit.
-    moon: lacquer("#f1e2c4", environment, 0.5),
     rock: stoneMaterial(environment),
     glass: new THREE.MeshPhysicalMaterial({
       color: "#bcd4ff",
@@ -108,15 +131,22 @@ function createMaterials(environment: THREE.Texture) {
       depthWrite: false,
     }),
     porthole: new THREE.MeshPhysicalMaterial({ color: "#2b3cff", roughness: 0.05, metalness: 0.6, clearcoat: 1, envMap: environment }),
-    lampOn: glowing(COLORS.visor, 2.2),
-    beacon: glowing("#ff2a2a", 3),
-    engine: glowing("#7fe7ff", 2),
-    alien: lacquer(COLORS.alien, environment, 0.32),
-    eye: lacquer("#ffffff", environment, 0.15),
-    chrome: new THREE.MeshPhysicalMaterial({ color: "#dfe3ea", roughness: 0.18, metalness: 1, envMap: environment }),
-    // Stars glow from inside, so they shine on the dark.
-    starGold: new THREE.MeshPhysicalMaterial({ color: COLORS.visor, emissive: COLORS.visor, emissiveIntensity: 0.9, roughness: 0.3, clearcoat: 1, envMap: environment }),
-    starWhite: new THREE.MeshPhysicalMaterial({ color: "#ffffff", emissive: "#fff3d6", emissiveIntensity: 0.8, roughness: 0.3, clearcoat: 1, envMap: environment }),
+    alien: lacquer(COLORS.alien, environment, 0.4),
+    alienDark: lacquer("#2f5a22", environment, 0.5),
+    // Glossy black eyes: a deep colour with a sharp clear coat for the highlights.
+    eyeBlack: new THREE.MeshPhysicalMaterial({ color: "#0a0b0f", roughness: 0.15, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.03, envMap: environment, envMapIntensity: 1.2 }),
+    glint: glowing("#ffffff", 1.6),
+    // Satin silver hull.
+    silver: new THREE.MeshPhysicalMaterial({ color: "#cfd4db", roughness: 0.32, metalness: 0.55, clearcoat: 0.6, clearcoatRoughness: 0.15, envMap: environment }),
+    bezel: lacquer("#3a3d44", environment, 0.35),
+    amber: glowing("#ffae2e", 1.5),
+    neon: glowing("#5fe8ff", 2),
+    // Crystal stars (user reference, 2026-10-06): lilac glass that refracts
+    // what is behind it, splits light into faint rainbows at the edges and
+    // carries a soft iridescent sheen. A trace of inner light keeps them
+    // readable against black space.
+    crystal: crystal("#e4d9ff", "#a487ff", environment),
+    crystalBlue: crystal("#dde4ff", "#8b9bff", environment),
     flame: glowing("#ff7a1a", 1.8),
     flameCore: glowing("#ffd27a", 2.4),
   };
@@ -371,19 +401,22 @@ function stoneMaterial(environment: THREE.Texture) {
         vec2 stoneSlope = vec2(dFdx(stoneHeight), dFdy(stoneHeight)) * 1.6;
         normal = stonePerturb(-vViewPosition, normal, stoneSlope, faceDirection);`,
       )
-      .replace(
-        "#include <dithering_fragment>",
-        `#include <dithering_fragment>
-        // Brightness from the lighting, hue from the stone itself.
-        vec3 stoneLumaWeights = vec3(0.299, 0.587, 0.114);
-        float litLuma = dot(gl_FragColor.rgb, stoneLumaWeights);
-        vec3 albedo = diffuseColor.rgb;
-        float albedoLuma = max(dot(albedo, stoneLumaWeights), 0.02);
-        gl_FragColor.rgb = mix(gl_FragColor.rgb, albedo * (litLuma / albedoLuma), 0.8);`,
-      );
+      .replace("#include <dithering_fragment>", `#include <dithering_fragment>\n${keepOwnHue(0.8)}`);
   };
   return material;
 }
+
+/**
+ * GLSL that rebuilds the lit colour from the surface's own colour at the lit
+ * brightness: the scene's blue and magenta rim lights stop tinting it.
+ * Insert after `dithering_fragment`; `amount` is how much of it applies.
+ */
+const keepOwnHue = (amount: number) => /* glsl */ `
+  vec3 ownLumaWeights = vec3(0.299, 0.587, 0.114);
+  float ownLitLuma = dot(gl_FragColor.rgb, ownLumaWeights);
+  float ownAlbedoLuma = max(dot(diffuseColor.rgb, ownLumaWeights), 0.02);
+  gl_FragColor.rgb = mix(gl_FragColor.rgb, diffuseColor.rgb * (ownLitLuma / ownAlbedoLuma), ${amount.toFixed(2)});
+`;
 
 // ---------------------------------------------------------------------------
 // Canvas textures (generated, nothing downloaded).
@@ -437,97 +470,97 @@ function halo(texture: THREE.Texture, color: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Planet: banded violet surface with soft craters, a layered ring system, a soft
-// atmosphere and two moons.
+// Planet, after the user's reference (2026-10-06): a soft, matte peach and
+// orange globe with gentle bands, inside a wide, thin ring system of fine
+// cream and grey-brown bands with gaps and a bright cream outer edge.
 
-function planetTextures() {
-  const random = seeded(7);
-  // Colour: soft bands of violets and lilacs with wispy streaks.
-  const map = canvasTexture(1024, 512, (c) => {
-    const bands = ["#c8b6ff", "#b59df7", "#d7c9ff", "#a58be8", "#c3adff", "#9c7fe0", "#cdbcff", "#b8a2f5"];
+/** Ring system inner and outer radius, in planet radii. */
+const RING_INNER = 1.3;
+const RING_OUTER = 2.25;
+
+function saturnTextures() {
+  const random = seeded(11);
+  // Surface: soft horizontal bands of peach and orange, blurred together.
+  const surface = canvasTexture(1024, 512, (c) => {
+    const bands = ["#f4bb8c", "#eeaa78", "#f7c99e", "#e9a06d", "#f9d3ac", "#f0b383", "#f5c091"];
     let y = 0;
     while (y < 512) {
-      const height = 18 + random() * 60;
+      const height = 14 + random() * 46;
       c.fillStyle = bands[Math.floor(random() * bands.length)];
       c.fillRect(0, y, 1024, height + 2);
       y += height;
     }
-    c.filter = "blur(10px)";
+    c.filter = "blur(9px)";
     c.drawImage(c.canvas, 0, 0);
     c.filter = "none";
-    // Long wispy streaks along the bands.
-    for (let i = 0; i < 40; i++) {
-      c.strokeStyle = random() > 0.5 ? "rgba(255,255,255,0.12)" : "rgba(90,60,170,0.14)";
-      c.lineWidth = 2 + random() * 6;
-      const sy = random() * 512;
-      c.beginPath();
-      c.moveTo(random() * 1024, sy);
-      c.bezierCurveTo(random() * 1024, sy + (random() - 0.5) * 30, random() * 1024, sy + (random() - 0.5) * 30, random() * 1024, sy);
-      c.stroke();
-    }
+    // A warmer belt just below the equator, like the reference.
+    const belt = c.createLinearGradient(0, 270, 0, 330);
+    belt.addColorStop(0, "rgba(255,150,60,0)");
+    belt.addColorStop(0.5, "rgba(255,160,80,0.28)");
+    belt.addColorStop(1, "rgba(255,150,60,0)");
+    c.fillStyle = belt;
+    c.fillRect(0, 270, 1024, 60);
   });
-  // Bump: craters scattered over the surface.
-  const bump = canvasTexture(
-    1024,
-    512,
-    (c) => {
-      c.fillStyle = "#808080";
-      c.fillRect(0, 0, 1024, 512);
-      for (let i = 0; i < 70; i++) {
-        const x = random() * 1024;
-        const y = 60 + random() * 392;
-        const r = 4 + random() ** 2 * 34;
-        const bowl = c.createRadialGradient(x, y, 0, x, y, r);
-        bowl.addColorStop(0, "#4a4a4a");
-        bowl.addColorStop(0.75, "#6a6a6a");
-        bowl.addColorStop(0.9, "#a8a8a8");
-        bowl.addColorStop(1, "rgba(128,128,128,0)");
-        c.fillStyle = bowl;
-        c.beginPath();
-        c.ellipse(x, y, r * 1.6, r, 0, 0, Math.PI * 2);
-        c.fill();
+  // Rings: concentric bands drawn as circles on a square, matching RingGeometry's planar UVs.
+  const rings = canvasTexture(1024, 1024, (c) => {
+    const centre = 512;
+    const outer = 512;
+    const inner = outer * (RING_INNER / RING_OUTER);
+    // Broad bands of slightly different tone (a smooth random walk, so no
+    // fine repeating pattern that would shimmer as moiré).
+    const steps = Array.from({ length: 40 }, () => random() - 0.5);
+    const band = (t: number) => {
+      const x = t * (steps.length - 1);
+      const i = Math.floor(x);
+      const f = x - i;
+      return steps[i] * (1 - f) + (steps[i + 1] ?? steps[i]) * f;
+    };
+    for (let r = outer; r > inner; r -= 1) {
+      const t = (r - inner) / (outer - inner);
+      // Inner rings dim and grey-brown, the outer half brighter cream, a bright rim at the edge.
+      let alpha = 0.3 + t * 0.55;
+      let tone = 0.5 + t * 0.42 + band(t) * 0.16;
+      if (t > 0.92) {
+        tone = 0.98;
+        alpha = 0.95;
       }
-    },
-    false,
-  );
-  // Rings: concentric bands with gaps, orange through cream.
-  const rings = canvasTexture(512, 512, (c) => {
-    const centre = 256;
-    const inner = 256 * (1.25 / 1.8);
-    for (let r = 256; r > inner; r -= 1) {
-      const t = (r - inner) / (256 - inner);
-      const gap = Math.abs(t - 0.62) < 0.035 || Math.abs(t - 0.25) < 0.02;
-      const shade = 0.75 + Math.sin(t * 60) * 0.12 + Math.sin(t * 13) * 0.1;
-      // Mixed in sRGB (getStyle), so the orange stays the brand orange.
-      const color = new THREE.Color("#ff4f00").lerp(new THREE.Color("#ffc890"), t < 0.5 ? 0.12 : 0.5 * (1 - t)).multiplyScalar(shade);
-      c.globalAlpha = gap ? 0.08 : 0.95 - t * 0.2;
-      c.strokeStyle = color.getStyle();
-      c.lineWidth = 1.5;
+      // Gaps: a wide dark one (like the Cassini division) and a thin one near the edge.
+      if (Math.abs(t - 0.62) < 0.035) alpha *= 0.12;
+      if (Math.abs(t - 0.885) < 0.008) alpha *= 0.2;
+      const warm = new THREE.Color().setRGB(0.62, 0.56, 0.48).lerp(new THREE.Color().setRGB(0.97, 0.91, 0.8), Math.min(1, tone));
+      c.globalAlpha = Math.min(1, alpha);
+      c.strokeStyle = `rgb(${Math.round(warm.r * 255)},${Math.round(warm.g * 255)},${Math.round(warm.b * 255)})`;
+      c.lineWidth = 1.6;
       c.beginPath();
       c.arc(centre, centre, r, 0, Math.PI * 2);
       c.stroke();
     }
     c.globalAlpha = 1;
   });
-  return { map, bump, rings };
+  return { surface, rings };
 }
 
-function buildPlanet(m: Materials, moonGeometry: THREE.BufferGeometry) {
+function buildPlanet() {
   const planet = new THREE.Group();
-  const textures = planetTextures();
-  const surface = new THREE.MeshPhysicalMaterial({
-    map: textures.map,
-    bumpMap: textures.bump,
-    bumpScale: 1.5,
-    // Satin, not glossy: no sharp reflections across the surface.
-    roughness: 0.78,
-    metalness: 0,
-    envMap: (m.white as THREE.MeshPhysicalMaterial).envMap,
-    envMapIntensity: 0.5,
-  });
+  const textures = saturnTextures();
+  // Matte, no gloss: soft like the reference, no reflections across the surface.
+  const surface = new THREE.MeshStandardMaterial({ map: textures.surface, roughness: 0.9, metalness: 0 });
+  surface.onBeforeCompile = (shader) => {
+    shader.fragmentShader = shader.fragmentShader.replace("#include <dithering_fragment>", `#include <dithering_fragment>\n${keepOwnHue(0.7)}`);
+  };
+  const system = new THREE.Group();
+  // The whole system leans a little, the ring tipped toward the visitor.
+  system.rotation.z = -0.24;
   const body = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 64), surface);
-  planet.add(body);
-  // Atmosphere: a soft violet glow round the rim.
+  system.add(body);
+  // Rings: unlit and softly self-bright, as in the reference; drawn in depth
+  // order with the globe, so the far side passes behind it.
+  const ringMaterial = new THREE.MeshBasicMaterial({ map: textures.rings, transparent: true, side: THREE.DoubleSide, depthWrite: false });
+  const ring = new THREE.Mesh(new THREE.RingGeometry(RING_INNER, RING_OUTER, 160, 1), ringMaterial);
+  ring.rotation.x = -Math.PI / 2 + 0.36;
+  system.add(ring);
+  planet.add(system);
+  // A warm glow round the globe.
   const glow = halo(
     canvasTexture(128, 128, (c) => {
       const g = c.createRadialGradient(64, 64, 40, 64, 64, 64);
@@ -536,150 +569,162 @@ function buildPlanet(m: Materials, moonGeometry: THREE.BufferGeometry) {
       c.fillStyle = g;
       c.fillRect(0, 0, 128, 128);
     }),
-    "#9d7cff",
+    "#ffae6a",
   );
-  glow.scale.setScalar(3.1);
-  glow.material.opacity = 0.55;
+  glow.scale.setScalar(2.6);
+  glow.material.opacity = 0.3;
   glow.renderOrder = -1;
   planet.add(glow);
-  // Ring system: a flat banded disc, tilted.
-  // Partly self-lit so the orange stays orange on the shadow side.
-  const ringMaterial = new THREE.MeshStandardMaterial({
-    map: textures.rings,
-    emissive: "#ffffff",
-    emissiveMap: textures.rings,
-    emissiveIntensity: 0.55,
-    transparent: true,
-    side: THREE.DoubleSide,
-    roughness: 0.6,
-    depthWrite: false,
-  });
-  const ring = new THREE.Mesh(new THREE.RingGeometry(1.25, 1.8, 128, 1), ringMaterial);
-  // RingGeometry's UVs are planar, so the concentric texture lines up with the disc.
-  ring.rotation.set(-Math.PI / 2 + 0.38, 0.22, 0);
-  planet.add(ring);
-  // Two moons: a cratered yellow one and a tiny white one.
-  const moon = new THREE.Mesh(moonGeometry, m.moon);
-  moon.scale.setScalar(0.18);
-  planet.add(moon);
-  const moonlet = new THREE.Mesh(new THREE.SphereGeometry(0.07, 24, 16), m.white);
-  planet.add(moonlet);
   return {
     object: planet,
     update(time: number) {
-      planet.rotation.z = Math.sin(time * 0.18) * 0.06;
-      body.rotation.y = time * 0.12;
-      ring.rotation.z = time * 0.03;
-      const a = time * 0.45;
-      moon.position.set(Math.cos(a) * 2.7, Math.sin(a) * 0.7, Math.sin(a) * 2.7);
-      moon.rotation.y = time * 0.6;
-      const b = -time * 0.8 + 2;
-      moonlet.position.set(Math.cos(b) * 1.7, 0.9 + Math.sin(b) * 0.2, Math.sin(b) * 1.7);
+      planet.rotation.z = Math.sin(time * 0.18) * 0.04;
+      body.rotation.y = time * 0.08;
     },
   };
 }
 
 // ---------------------------------------------------------------------------
-// UFO: a cobalt saucer with chrome trim and rivets, chasing lights, a glowing
-// engine ring underneath, an antenna, a glass dome and a green alien with big
-// heavy-lidded eyes.
+// UFO, after the user's references (2026-10-06): a satin silver saucer with
+// a bold orange band round the rim, a row of amber lights in dark bezels,
+// cyan neon strips and engine ring underneath, a dark cockpit rim and a tall
+// glass bubble. Inside, a cute green alien with a big egg-shaped head, huge
+// glossy black almond eyes and a tiny smile, one hand waving and the other
+// gripping the cockpit rim.
+
+/** A capsule from one point to another (arms, fingers). */
+function limb(from: THREE.Vector3, to: THREE.Vector3, radius: number, material: THREE.Material) {
+  const length = from.distanceTo(to);
+  const mesh = new THREE.Mesh(new THREE.CapsuleGeometry(radius, Math.max(0.001, length), 6, 12), material);
+  mesh.position.copy(from).add(to).multiplyScalar(0.5);
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), to.clone().sub(from).normalize());
+  return mesh;
+}
+
+/** A small hand: a flattened palm with three fingers and a thumb, fingers along +y. */
+function buildHand(material: THREE.Material, spread = 0.35) {
+  const hand = new THREE.Group();
+  const palm = new THREE.Mesh(new THREE.SphereGeometry(0.036, 16, 12), material);
+  palm.scale.set(1, 1.05, 0.6);
+  hand.add(palm);
+  [-1, 0, 1].forEach((i) => {
+    const angle = i * spread * 0.5;
+    const base = new THREE.Vector3(Math.sin(angle) * 0.02, 0.025, 0);
+    hand.add(limb(base, base.clone().add(new THREE.Vector3(Math.sin(angle) * 0.045, Math.cos(angle) * 0.045, 0)), 0.011, material));
+  });
+  hand.add(limb(new THREE.Vector3(-0.025, 0, 0), new THREE.Vector3(-0.055, 0.025, 0.005), 0.011, material));
+  return hand;
+}
 
 function buildUfo(m: Materials, flare: THREE.Texture) {
   const ufo = new THREE.Group();
-  // Width 2 (radius 1).
-  ufo.add(new THREE.Mesh(softLathe([[0, -0.3], [0.32, -0.27], [0.74, -0.1], [0.94, 0.0], [0.82, 0.12], [0.48, 0.2], [0, 0.21]], 64), m.cobalt));
-  // Chrome trim round the rim, with rivets.
-  const trim = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.045, 16, 96), m.chrome);
-  trim.rotation.x = Math.PI / 2;
-  ufo.add(trim);
-  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.03, 12, 64), m.chrome);
-  collar.rotation.x = Math.PI / 2;
-  collar.position.y = 0.2;
-  ufo.add(collar);
-  for (let i = 0; i < 28; i++) {
-    const a = (i / 28) * Math.PI * 2;
-    const rivet = new THREE.Mesh(new THREE.SphereGeometry(0.014, 8, 6), m.chrome);
-    rivet.position.set(Math.cos(a) * 0.7, 0.155, Math.sin(a) * 0.7);
-    ufo.add(rivet);
-  }
-  // Lights on the trim, each with a glow that chases round.
-  const lamps: Array<{ bulb: THREE.Mesh; glow: THREE.Sprite }> = [];
-  for (let i = 0; i < 12; i++) {
-    const a = (i / 12) * Math.PI * 2;
-    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.055, 16, 12), m.visor);
-    bulb.position.set(Math.cos(a) * 0.99, 0, Math.sin(a) * 0.99);
-    const glow = halo(flare, "#ffc23a");
-    glow.position.copy(bulb.position);
-    ufo.add(bulb, glow);
-    lamps.push({ bulb, glow });
-  }
-  // Engine glow underneath: a ring of light around a hatch.
-  const engine = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.035, 12, 64), m.engine);
+  // Hull, radius 1: silver underside, an orange band round the rim, a silver top.
+  ufo.add(new THREE.Mesh(softLathe([[0, -0.3], [0.32, -0.28], [0.72, -0.16], [0.97, -0.04]], 64), m.silver));
+  ufo.add(new THREE.Mesh(softLathe([[0.96, -0.05], [1.0, -0.02], [1.01, 0.02], [0.99, 0.06], [0.95, 0.08]], 64), m.orange));
+  ufo.add(new THREE.Mesh(softLathe([[0.95, 0.075], [0.82, 0.15], [0.64, 0.23], [0.52, 0.27]], 64), m.silver));
+  // Dark cockpit rim.
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.52, 0.05, 16, 64), m.bezel);
+  rim.rotation.x = Math.PI / 2;
+  rim.position.y = 0.28;
+  ufo.add(rim);
+  // Cyan neon strip under the band, and the engine ring and glow underneath.
+  const strip = new THREE.Mesh(new THREE.TorusGeometry(0.9, 0.012, 8, 96), m.neon);
+  strip.rotation.x = Math.PI / 2;
+  strip.position.y = -0.09;
+  ufo.add(strip);
+  const engine = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.03, 12, 64), m.neon);
   engine.rotation.x = Math.PI / 2;
   engine.position.y = -0.29;
   ufo.add(engine);
   const engineGlow = halo(flare, "#7fe7ff");
   engineGlow.position.y = -0.34;
   ufo.add(engineGlow);
-  const hatch = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.22, 0.05, 32), m.chrome);
+  const hatch = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.22, 0.05, 32), m.bezel);
   hatch.position.y = -0.3;
   ufo.add(hatch);
+  // Amber lights in dark bezels on the upper slope, facing out along it.
+  const lamps: Array<{ bulb: THREE.Mesh; glow: THREE.Sprite }> = [];
+  const slope = new THREE.Vector3(0.45, 0.89, 0).normalize();
+  for (let i = 0; i < 10; i++) {
+    const pivot = new THREE.Group();
+    pivot.rotation.y = (i / 10) * Math.PI * 2;
+    const seat = new THREE.Group();
+    seat.position.set(0.8, 0.165, 0);
+    seat.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), slope);
+    const bezel = new THREE.Mesh(new THREE.TorusGeometry(0.058, 0.02, 10, 28), m.bezel);
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.052, 18, 12), m.amber);
+    bulb.scale.z = 0.55;
+    seat.add(bezel, bulb);
+    const glow = halo(flare, "#ffb340");
+    glow.position.set(0, 0, 0.03);
+    seat.add(glow);
+    pivot.add(seat);
+    ufo.add(pivot);
+    lamps.push({ bulb, glow });
+  }
 
-  // The alien: a green pear with two big eyes under heavy lids, antennae and a waving arm.
+  // The alien.
   const alien = new THREE.Group();
-  alien.position.y = 0.16;
-  alien.scale.setScalar(1.3);
-  const body = new THREE.Mesh(softLathe([[0, 0], [0.14, 0.02], [0.18, 0.12], [0.16, 0.26], [0.12, 0.36], [0.05, 0.41], [0, 0.415]], 40), m.alien);
-  alien.add(body);
-  const lids: THREE.Mesh[] = [];
-  const pupils: THREE.Mesh[] = [];
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.1, 8, 20), m.alien);
+  torso.position.y = 0.26;
+  alien.add(torso);
+  alien.add(limb(new THREE.Vector3(0, 0.33, 0), new THREE.Vector3(0, 0.44, 0), 0.045, m.alien));
+  // Head: a wide cranium narrowing to a small chin.
+  const head = new THREE.Group();
+  head.position.y = 0.58;
+  head.add(new THREE.Mesh(softLathe([[0, -0.155], [0.06, -0.145], [0.115, -0.09], [0.16, 0.0], [0.185, 0.09], [0.175, 0.165], [0.12, 0.225], [0, 0.25]], 48), m.alien));
+  // Huge glossy black almond eyes, slanted outward, with a highlight each.
+  const eyes: THREE.Group[] = [];
   [-1, 1].forEach((side) => {
     const eye = new THREE.Group();
-    eye.position.set(side * 0.065, 0.27, 0.115);
-    const white = new THREE.Mesh(new THREE.SphereGeometry(0.06, 24, 16), m.eye);
-    eye.add(white);
-    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.026, 16, 12), m.ink);
-    pupil.position.z = 0.045;
-    eye.add(pupil);
-    pupils.push(pupil);
-    // Upper lid: a green shell over the top of the eye, half closed for a deadpan look.
-    const lid = new THREE.Mesh(new THREE.SphereGeometry(0.064, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), m.alien);
-    lid.rotation.x = 0.5;
-    eye.add(lid);
-    lids.push(lid);
-    alien.add(eye);
-    const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.012, 0.16, 8), m.alien);
-    stalk.position.set(side * 0.06, 0.47, 0);
-    stalk.rotation.z = -side * 0.3;
-    alien.add(stalk);
-    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.025, 12, 8), m.lampOn);
-    tip.position.set(side * 0.085, 0.55, 0);
-    alien.add(tip);
+    eye.position.set(side * 0.075, 0.025, 0.13);
+    eye.rotation.set(0, side * 0.42, side * 0.45);
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(0.07, 28, 18), m.eyeBlack);
+    ball.scale.set(1, 0.62, 0.5);
+    eye.add(ball);
+    const glint = new THREE.Mesh(new THREE.SphereGeometry(0.012, 10, 8), m.glint);
+    glint.position.set(-side * 0.025, 0.018, 0.033);
+    eye.add(glint);
+    head.add(eye);
+    eyes.push(eye);
   });
+  // Tiny nostrils and a small smile.
+  [-1, 1].forEach((side) => {
+    const nostril = new THREE.Mesh(new THREE.SphereGeometry(0.006, 8, 6), m.alienDark);
+    nostril.position.set(side * 0.012, -0.045, 0.165);
+    head.add(nostril);
+  });
+  const smile = new THREE.Mesh(new THREE.TorusGeometry(0.026, 0.0055, 8, 20, Math.PI), m.alienDark);
+  smile.rotation.z = Math.PI;
+  smile.position.set(0, -0.085, 0.152);
+  head.add(smile);
+  alien.add(head);
+  // Waving arm (his left, our right), pivoting at the shoulder.
   const shoulder = new THREE.Group();
-  shoulder.position.set(0.15, 0.2, 0.02);
-  const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.025, 0.12, 6, 12), m.alien);
-  arm.position.y = 0.08;
-  shoulder.add(arm);
-  const hand = new THREE.Mesh(new THREE.SphereGeometry(0.035, 16, 12), m.alien);
-  hand.position.y = 0.17;
-  shoulder.add(hand);
+  shoulder.position.set(0.11, 0.34, 0.03);
+  const elbow = new THREE.Vector3(0.09, 0.09, 0.02);
+  const wrist = new THREE.Vector3(0.1, 0.2, 0.04);
+  shoulder.add(limb(new THREE.Vector3(), elbow, 0.026, m.alien), limb(elbow, wrist, 0.023, m.alien));
+  const waveHand = buildHand(m.alien);
+  waveHand.position.copy(wrist).add(new THREE.Vector3(0, 0.03, 0));
+  shoulder.add(waveHand);
   alien.add(shoulder);
+  // The other hand grips the cockpit rim at the front.
+  const grip = new THREE.Vector3(-0.2, 0.345, 0.45);
+  alien.add(limb(new THREE.Vector3(-0.11, 0.33, 0.04), new THREE.Vector3(-0.15, 0.3, 0.25), 0.026, m.alien));
+  alien.add(limb(new THREE.Vector3(-0.15, 0.3, 0.25), grip, 0.023, m.alien));
+  const gripHand = buildHand(m.alien, 0.5);
+  gripHand.position.copy(grip);
+  // Fingers over the rim, pointing out and down.
+  gripHand.rotation.set(Math.PI / 2 + 0.5, 0, 0.2);
+  alien.add(gripHand);
   ufo.add(alien);
 
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.5, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2), m.glass);
-  dome.position.y = 0.2;
+  // Tall glass bubble, sitting in the rim.
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.56, 48, 28, 0, Math.PI * 2, 0, Math.PI * 0.6), m.glass);
+  dome.position.y = 0.28 + Math.cos(Math.PI * 0.6) * -0.56 * 0.55;
   dome.renderOrder = 2;
   ufo.add(dome);
-  // Antenna on the dome with a blinking red tip, like Nova's.
-  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.012, 0.16, 8), m.chrome);
-  mast.position.y = 0.77;
-  ufo.add(mast);
-  const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.025, 12, 8), m.beacon);
-  beacon.position.y = 0.86;
-  const beaconGlow = halo(flare, "#ff3a2a");
-  beaconGlow.position.y = 0.86;
-  ufo.add(beacon, beaconGlow);
 
   // The tractor beam: a soft cone of light, drawn in world space toward Nova.
   const fade = canvasTexture(4, 128, (c) => {
@@ -711,49 +756,56 @@ function buildUfo(m: Materials, flare: THREE.Texture) {
     beam,
     setBeam: (opacity: number) => void (beamMaterial.opacity = opacity),
     update(time: number, wave: number, beamOn: number) {
-      lamps.forEach(({ bulb, glow }, i) => {
-        // A steady chase around the rim.
-        const on = (Math.sin(time * 6 - i * 0.9) + 1) / 2;
-        bulb.material = on > 0.55 ? m.lampOn : m.visor;
-        glow.scale.setScalar(0.12 + on * 0.22);
-        glow.material.opacity = 0.25 + on * 0.75;
+      lamps.forEach(({ glow }, i) => {
+        // A gentle shimmer running round the rim.
+        const on = (Math.sin(time * 3 - i * 0.7) + 1) / 2;
+        glow.scale.setScalar(0.16 + on * 0.1);
+        glow.material.opacity = 0.45 + on * 0.4;
       });
       const pulse = (Math.sin(time * 5) + 1) / 2;
       engineGlow.scale.setScalar(0.5 + pulse * 0.25 + beamOn * 0.6);
       engineGlow.material.opacity = 0.5 + beamOn * 0.5;
-      const blink = time % 1.4 < 0.15 ? 1 : 0;
-      beaconGlow.scale.setScalar(0.08 + blink * 0.18);
       // The saucer turns; the alien keeps facing the visitor, looking around a little.
-      alien.rotation.y = -ufo.rotation.y + Math.sin(time * 0.7) * 0.25;
-      shoulder.rotation.z = -0.4 - wave * (1.7 + Math.sin(time * 11) * 0.5);
-      body.scale.set(1 + Math.sin(time * 2.3) * 0.02, 1 - Math.sin(time * 2.3) * 0.03, 1);
-      // Pupils glance down toward Nova; a blink every few seconds.
-      pupils.forEach((pupil) => pupil.position.set(0.012, -0.018, 0.045));
-      const blinking = time % 3.7 < 0.14 ? 1 : 0;
-      lids.forEach((lid) => (lid.rotation.x = 0.5 + blinking * 1.1 - wave * 0.25));
+      alien.rotation.y = -ufo.rotation.y + Math.sin(time * 0.7) * 0.22;
+      head.rotation.set(0.12 + Math.sin(time * 0.9) * 0.04, 0, Math.sin(time * 0.6) * 0.06);
+      // Waving: the whole arm swings from the shoulder, the hand flaps a little more.
+      shoulder.rotation.z = -0.15 - wave * (0.5 + Math.sin(time * 9) * 0.35);
+      waveHand.rotation.z = wave * Math.sin(time * 9 - 0.6) * 0.35;
+      torso.scale.set(1 + Math.sin(time * 2.3) * 0.02, 1 - Math.sin(time * 2.3) * 0.03, 1);
+      // A blink every few seconds.
+      const blinking = time % 3.7 < 0.12 ? 0.12 : 1;
+      eyes.forEach((eye) => eye.scale.set(1, blinking, 1));
     },
   };
 }
 
 // ---------------------------------------------------------------------------
-// Sparkle stars: chubby four-point stars, extruded with a fat bevel.
+// Crystal stars: a sharp four-point star cut in flat facets. Each arm is a
+// ridge running from the raised centre out to its tip, on both sides, so
+// every facet catches the light like cut glass.
 
 function sparkleGeometry() {
-  const shape = new THREE.Shape();
-  const points = 4;
-  const outer = 1;
-  const inner = 0.32;
-  for (let i = 0; i < points; i++) {
-    const a = (i / points) * Math.PI * 2 + Math.PI / 2;
-    const next = ((i + 1) / points) * Math.PI * 2 + Math.PI / 2;
-    const mid = (a + next) / 2;
-    const tip = new THREE.Vector2(Math.cos(a) * outer, Math.sin(a) * outer);
-    if (i === 0) shape.moveTo(tip.x, tip.y);
-    // Curved sides pulled toward the centre: a soft, puffy sparkle.
-    shape.quadraticCurveTo(Math.cos(mid) * inner, Math.sin(mid) * inner, Math.cos(next) * outer, Math.sin(next) * outer);
+  const tips = 4;
+  const valley = 0.3;
+  const peak = 0.36;
+  const top = new THREE.Vector3(0, 0, peak);
+  const bottom = new THREE.Vector3(0, 0, -peak);
+  const outline: THREE.Vector3[] = [];
+  for (let i = 0; i < tips; i++) {
+    const a = (i / tips) * Math.PI * 2 + Math.PI / 2;
+    const between = a + Math.PI / tips;
+    outline.push(new THREE.Vector3(Math.cos(a), Math.sin(a), 0), new THREE.Vector3(Math.cos(between) * valley, Math.sin(between) * valley, 0));
   }
-  const geometry = new THREE.ExtrudeGeometry(shape, { depth: 0.12, bevelEnabled: true, bevelThickness: 0.16, bevelSize: 0.14, bevelSegments: 6, curveSegments: 12 });
-  geometry.center();
+  const positions: number[] = [];
+  for (let i = 0; i < outline.length; i++) {
+    const a = outline[i];
+    const b = outline[(i + 1) % outline.length];
+    // One facet up to the top centre, one down to the bottom centre (wound to face out).
+    positions.push(...a.toArray(), ...b.toArray(), ...top.toArray());
+    positions.push(...b.toArray(), ...a.toArray(), ...bottom.toArray());
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
   geometry.computeVertexNormals();
   return geometry;
 }
@@ -783,7 +835,7 @@ export function SpaceCast({ journey }: { journey: RefObject<JourneyState> }) {
     const root = new THREE.Group();
     const rocket = buildRocket(m);
     const rocks = [1, 2, 3].map(rockGeometry);
-    const planet = buildPlanet(m, new THREE.SphereGeometry(1, 32, 24));
+    const planet = buildPlanet();
     const ufo = buildUfo(m, flare);
     const asteroids = ASTEROIDS.map((spec, i) => {
       const mesh = new THREE.Mesh(rocks[i % rocks.length], m.rock);
@@ -792,12 +844,12 @@ export function SpaceCast({ journey }: { journey: RefObject<JourneyState> }) {
     });
     const kickRock = new THREE.Mesh(rocks[1], m.rock);
     const starShape = sparkleGeometry();
-    // A star: the shape plus a glow with a four-point flare.
+    // A star: the crystal plus a soft lilac glow with a four-point flare.
     const star = (i: number) => {
       const group = new THREE.Group();
-      const gold = i % 3 !== 0;
-      group.add(new THREE.Mesh(starShape, gold ? m.starGold : m.starWhite));
-      const glow = halo(flare, gold ? "#ffcf5a" : "#fff6e0");
+      const blue = i % 3 === 0;
+      group.add(new THREE.Mesh(starShape, blue ? m.crystalBlue : m.crystal));
+      const glow = halo(flare, blue ? "#b9c6ff" : "#d2bfff");
       glow.scale.setScalar(3.4);
       group.add(glow);
       return { group, glow };
@@ -878,8 +930,12 @@ export function SpaceCast({ journey }: { journey: RefObject<JourneyState> }) {
     });
 
     // The rock he kicks off: its top meets his feet.
+    // Its top meets his soles: centre one rock radius below his feet (the
+    // rock is about 0.9 of its size tall from the middle), plus room for his bob.
     const rockSize = 0.2 * K;
-    const rock = kickRockAt(j, s.novaFeetFy + 0.03);
+    const nearHeight = 2 * CAMERA_Z * Math.tan(THREE.MathUtils.degToRad(CAMERA_FOV / 2));
+    const rockRadius = (rockSize * 0.9) / nearHeight;
+    const rock = kickRockAt(j, s.novaFeetFy + rockRadius + 0.025);
     if (put(cast.kickRock, rock.fx, rock.fy, rock.z, rockSize) && j > 0.15) {
       cast.kickRock.rotation.set(rock.spin * 0.6, rock.spin, 0.3);
     } else if (j <= 0.15) {
@@ -923,14 +979,14 @@ export function SpaceCast({ journey }: { journey: RefObject<JourneyState> }) {
       cast.ufo.setBeam(ufo.beam * (0.14 + Math.sin(time * 9) * 0.03));
     }
 
-    /** Spins and twinkles a star; its glow pulses brighter than the shape. */
+    /** Turns a crystal star slowly so its facets catch the light, with a soft glow and the odd glint. */
     const shine = (group: THREE.Object3D, glow: THREE.Sprite, seed: number) => {
       const twinkle = (Math.sin(time * 2.4 + seed * 1.7) + 1) / 2;
-      const flash = Math.max(0, Math.sin(time * 0.9 + seed * 2.3)) ** 12;
-      group.rotation.set(Math.sin(time * 0.5 + seed) * 0.4, Math.sin(time * 0.4 + seed) * 0.5, time * 0.3 + seed);
-      glow.material.opacity = 0.45 + twinkle * 0.35 + flash * 0.4;
-      glow.material.rotation = -group.rotation.z;
-      glow.scale.setScalar(2.6 + twinkle * 1.2 + flash * 2.5);
+      // A bright glint every couple of seconds, on top of a steady twinkle.
+      const flash = Math.max(0, Math.sin(time * 1.6 + seed * 2.3)) ** 10;
+      group.rotation.set(Math.sin(time * 0.5 + seed) * 0.5, time * 0.35 + seed, Math.sin(time * 0.3 + seed) * 0.25);
+      glow.material.opacity = 0.4 + twinkle * 0.25 + flash * 0.6;
+      glow.scale.setScalar(2.6 + twinkle * 0.8 + flash * 3);
     };
 
     // Sparkle stars streaming past.
@@ -944,7 +1000,6 @@ export function SpaceCast({ journey }: { journey: RefObject<JourneyState> }) {
     });
 
     // Stars that pop in around the about text as Nova comes in to land, and ride with it.
-    const nearHeight = 2 * CAMERA_Z * Math.tan(THREE.MathUtils.degToRad(CAMERA_FOV / 2));
     cast.landing.forEach(({ spec, group, glow }) => {
       // On phones the text fills the width: only the stars above the heading, around Nova.
       if (lite && spec.dy > -0.2) {

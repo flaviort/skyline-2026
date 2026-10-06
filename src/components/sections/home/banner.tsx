@@ -76,7 +76,7 @@ export function Banner() {
             {intro.plain} <strong className="font-bold">{intro.strong}</strong>
           </p>
           <div data-enter className="shrink-0">
-            <ScrollCue href={scroll.href} label={scroll.label} className="max-md:size-[6.5rem]" />
+            <ScrollCue href={scroll.href} label={scroll.label} duration={scroll.duration} className="max-md:size-[6.5rem]" />
           </div>
         </div>
       </div>

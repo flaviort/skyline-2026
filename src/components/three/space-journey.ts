@@ -68,16 +68,19 @@ export function rocketAt(j: number) {
 
 export type AsteroidSpec = { fx: number; z: number; size: number; from: number; seed: number; lite?: boolean };
 
-/** The drifting field; `lite` rocks are left out on small screens. */
+/**
+ * The drifting rocks, placed by hand and staggered across the journey so
+ * only one or two share the screen at a time. They keep to the sides, clear
+ * of the planet in the middle. `lite` rocks are left out on small screens.
+ */
 export const ASTEROIDS: AsteroidSpec[] = [
-  { fx: 0.14, z: -2.5, size: 0.32, from: 0.14, seed: 1 },
-  { fx: 0.86, z: -1.2, size: 0.22, from: 0.18, seed: 2 },
-  { fx: 0.3, z: 0.8, size: 0.14, from: 0.24, seed: 3, lite: true },
-  { fx: 0.9, z: -3.5, size: 0.4, from: 0.27, seed: 4, lite: true },
-  { fx: 0.08, z: -0.4, size: 0.18, from: 0.33, seed: 5 },
-  { fx: 0.5, z: -4.5, size: 0.3, from: 0.36, seed: 6, lite: true },
+  { fx: 0.13, z: -2.4, size: 0.3, from: 0.04, seed: 1 },
+  { fx: 0.87, z: -1.2, size: 0.2, from: 0.17, seed: 2 },
+  { fx: 0.22, z: 0.6, size: 0.12, from: 0.31, seed: 3, lite: true },
+  { fx: 0.9, z: -3.4, size: 0.36, from: 0.45, seed: 4, lite: true },
+  { fx: 0.09, z: -0.7, size: 0.17, from: 0.6, seed: 5 },
 ];
-const ASTEROID_SPAN = 0.32;
+const ASTEROID_SPAN = 0.3;
 
 export function asteroidAt(spec: AsteroidSpec, j: number, time: number) {
   const t = range(j, spec.from, spec.from + ASTEROID_SPAN);
@@ -88,16 +91,20 @@ export function asteroidAt(spec: AsteroidSpec, j: number, time: number) {
   };
 }
 
-/** The rock Nova kicks off: rises to his feet, then spins away down and right. */
+/**
+ * The rock Nova kicks off: rises until it meets his feet (`rockCenter` is
+ * where its centre sits for that), then spins away down and right. It stays
+ * just behind him, so his feet are in front where they touch.
+ */
 export const KICK_AT = 0.38;
-export function kickRockAt(j: number, novaFeet: number) {
+export function kickRockAt(j: number, rockCenter: number) {
   if (j <= KICK_AT) {
     const t = smooth(range(j, 0.2, KICK_AT));
-    return { fx: 0.66 - t * 0.03, fy: 1.3 + (novaFeet - 1.3) * t, z: 0.2, spin: j * 3 };
+    return { fx: 0.65 - t * 0.02, fy: 1.3 + (rockCenter - 1.3) * t, z: -0.3, spin: j * 3 };
   }
   const t = range(j, KICK_AT, 0.56);
   const out = t * (2 - t);
-  return { fx: 0.63 + out * 0.32, fy: novaFeet + out * 0.9, z: 0.2 - out * 1.5, spin: KICK_AT * 3 + out * 9 };
+  return { fx: 0.63 + out * 0.32, fy: rockCenter + out * 0.9, z: -0.3 - out * 1.5, spin: KICK_AT * 3 + out * 9 };
 }
 
 /** Planet: rises, lingers in the middle while Nova circles it, moves on. */
@@ -106,7 +113,7 @@ export function planetAt(j: number) {
     fx: track([[0.36, 0.5], [0.5, 0.48], [0.66, 0.52], [0.82, 0.54]], j),
     fy: track([[0.36, 1.7], [0.5, 0.56], [0.66, 0.44], [0.78, -0.75]], j),
     z: -1.8,
-    size: 0.62,
+    size: 0.55,
   };
 }
 
@@ -115,8 +122,8 @@ export function orbitAt(j: number) {
   const blend = easeInOut(range(j, 0.44, 0.5)) * (1 - easeInOut(range(j, 0.64, 0.7)));
   // From the left and slightly in front, behind the planet, out on the right.
   const angle = Math.PI * (0.85 + easeInOut(range(j, 0.46, 0.68)) * 1.3);
-  // Wide enough to clear the ring system.
-  return { blend, angle, radius: 1.45 };
+  // Wide enough to clear the ring system (outer edge about 1.25 Nova heights).
+  return { blend, angle, radius: 1.5 };
 }
 
 /** UFO: slides in from the right, hovers over Nova, zips off the top. */
@@ -144,12 +151,12 @@ export type SparkleSpec = { fx: number; fy: number; z: number; size: number; see
  * through the journey: a mix of big and small, at different depths.
  */
 export const SPARKLES: SparkleSpec[] = [
-  { fx: 0.12, fy: 1.25, z: -1, size: 0.15, seed: 1 },
-  { fx: 0.86, fy: 1.6, z: 0.4, size: 0.06, seed: 2, lite: true },
-  { fx: 0.9, fy: 2.15, z: -0.6, size: 0.19, seed: 3 },
-  { fx: 0.2, fy: 2.55, z: 0.6, size: 0.05, seed: 4 },
-  { fx: 0.74, fy: 2.95, z: -2.2, size: 0.11, seed: 5, lite: true },
-  { fx: 0.32, fy: 3.35, z: -1.4, size: 0.08, seed: 6 },
+  { fx: 0.12, fy: 1.25, z: -1, size: 0.09, seed: 1 },
+  { fx: 0.86, fy: 1.6, z: 0.4, size: 0.036, seed: 2, lite: true },
+  { fx: 0.9, fy: 2.15, z: -0.6, size: 0.114, seed: 3 },
+  { fx: 0.2, fy: 2.55, z: 0.6, size: 0.03, seed: 4 },
+  { fx: 0.74, fy: 2.95, z: -2.2, size: 0.066, seed: 5, lite: true },
+  { fx: 0.32, fy: 3.35, z: -1.4, size: 0.048, seed: 6 },
 ];
 
 /**
@@ -158,9 +165,9 @@ export const SPARKLES: SparkleSpec[] = [
  * when (landing progress) each one appears.
  */
 export const LANDING_SPARKLES = [
-  { dx: -0.36, dy: 0.25, size: 0.15, at: 0.25, seed: 40 },
-  { dx: 0.38, dy: 1.0, size: 0.07, at: 0.4, seed: 41 },
-  { dx: 0.24, dy: -0.4, size: 0.06, at: 0.55, seed: 42 },
+  { dx: -0.36, dy: 0.25, size: 0.09, at: 0.25, seed: 40 },
+  { dx: 0.38, dy: 1.0, size: 0.042, at: 0.4, seed: 41 },
+  { dx: 0.24, dy: -0.4, size: 0.036, at: 0.55, seed: 42 },
 ];
 
 /** A pop with a little overshoot, 0 to 1 */
@@ -220,8 +227,9 @@ export function novaAt(j: number, aspect: number, K: number, out: NovaCue) {
     const planet = planetAt(j);
     toWorld(planet.fx, planet.fy, planet.z, aspect, planetWorld);
     const r = orbit.radius * K;
-    // Tilted against the ring: over the top behind the planet, lower in front.
-    orbitWorld.set(planetWorld.x + Math.cos(orbit.angle) * r, planetWorld.y - Math.sin(orbit.angle) * r * 0.5, planetWorld.z + Math.sin(orbit.angle) * r * 0.85);
+    // Tilted against the ring and lifted a little: over the top behind the
+    // planet, lower in front, and just above the ring where he passes its sides.
+    orbitWorld.set(planetWorld.x + Math.cos(orbit.angle) * r, planetWorld.y + r * (0.3 - Math.sin(orbit.angle) * 0.5), planetWorld.z + Math.sin(orbit.angle) * r * 0.85);
     toScreen(orbitWorld, aspect, orbitScreen);
     out.fx += (orbitScreen.x - out.fx) * orbit.blend;
     out.fy += (orbitScreen.y - out.fy) * orbit.blend;
