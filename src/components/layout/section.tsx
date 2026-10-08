@@ -1,7 +1,7 @@
-import type { ComponentPropsWithoutRef } from "react";
+import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
-type SectionProps = ComponentPropsWithoutRef<"section"> & {
+type SectionProps = ComponentProps<"section"> & {
   /** Dark is the site default; light flips every theme token to the ground */
   theme?: "light" | "dark";
   /** Tells the menu which logo color to use while it sits over this section */

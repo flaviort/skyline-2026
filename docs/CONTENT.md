@@ -14,11 +14,17 @@ The reference opens most sections with a two-line sentence above the headline (a
 - Button: Scroll
 - Retired with direction F: the lead "Strategy, brands and websites / made in Dallas, TX", the headline WE GROW / BRANDS / ASTRONOMICALLY and the "Discover more" link.
 
-**1b. About** (legacy site copy, the live site's About block)
+**1b. About** (new copy 2026-10-06, waiting for approval; "grow them astronomically" keeps the old site's line)
 - Eyebrow: About Skyline
-- Heading: ABOUT
-- Body: Through expert strategy and genius thinking, we launch and **grow brands**, both national and global, as well as help startups that need to punch above their weight.
-- Button: Get to Know Us
+- Statement: We launch brands [Nova lands here] and grow them astronomically. Industry veterans and sharp new minds from Dallas, working for national names, global players and startups that need to punch above their weight.
+- Link: Get to know us (`/about`)
+- Replaced: the legacy About block (heading ABOUT, "Through expert strategy and genius thinking...", button Get to Know Us)
+
+**1c. Stats** (waiting for approval; sources in `docs/specs/home/01c-stats.md`)
+- 30+ / Brands on our roster / Scooter Braun, Axl Rose, Dymatize, Barker Wellness and Cypress Hemp among them.
+- 10+ / Years in the business / Launching and scaling national and global brands from the Dallas Design District.
+- 3x / Revenue in one year / What a lifestyle brand made the year after we rebuilt it.
+- Photo: the Dallas office (`agency-01.jpg`), alt "The Skyline office in the Dallas Design District"
 
 **2. Logos**
 - No copy. Accessible label: "Brands we've worked with".
@@ -65,6 +71,24 @@ The reference opens most sections with a two-line sentence above the headline (a
 
 **11a. Intro** (launch countdown, 2026-10-05, **new, waiting for approval**)
 - Countdown under the four stage lights: T-minus 04 / 03 / 02 / 01, then Liftoff.
+
+## Site build, 2026-10-07 (new copy, waiting for approval)
+
+Legacy copy reused as is: about intro, story, statement and stewardship paragraphs; projects intro; contact intro and form labels; the three service descriptions from the old about page. New:
+
+- Page titles: About "We grow / *brands* / astronomically" (legacy headline), Work "Missions / *we flew*", Services "Seven ways / *to leave orbit*", Contact "Let's / *talk*", FAQ "Ask mission / *control*" with "Questions before liftoff?", 404 "Lost in / *space*", "This page drifted out of orbit. Let's get you back to base.", button "Back to base".
+- Service descriptions for Digital Strategy, SEO, Branding and Media Production (`src/content/services.ts`), built from the FAQ drafts.
+- About: "What we / *bring aboard*", "Strategy, brand, web, UX, marketing, SEO and media production, in one crew.", "Good stewards", "Download our capabilities deck" (the 2023 PDF, now at `public/downloads/`).
+- Work badge "Six missions and counting"; card link "View the case"; case labels "Case study", "Visit the site", "Up next".
+- Kind words: title "Kind / *words*", invitation card "Next on the pile" / "Your mission could be next." / "Start your mission".
+- **Testimonials to confirm:** Alexander Smithson and Skyler Crash, excerpts of the two 5-star reviews in the old site's structured data (never shown on the old pages). Remove them from `src/content/pages.ts` if they are not real.
+- Contact form: "Company" (optional), "I'm interested in" with the seven services, "Tell us where you want to go", "Message received", error line pointing to the email.
+- FAQ: the drafted answers ship, including the ones marked [confirm] in the spec (steps, team, in-house, platforms wording dropped, editing, SEO timing, reporting). Hosting and maintenance and retainers are left out until answered.
+- Homepage client names marquee: Dymatize, Airly, Barker Wellness, Think Apollo, Scooter Braun, Sophie Brussaux, Axl Rose, Andrew Callaghan, Cypress Hemp.
+
+## Cookies and legal, 2026-10-08 (new copy, waiting for approval)
+
+All in `src/content/legal.ts`. Banner: "Cookie check" / "Houston, we have cookies"; signal variant "Signal received" / "We got your browser's memo". Dialog: "Mission control" / "Pick your cookies", rows Life support, Cabin settings, Telemetry, Transmissions, Radio silence, each with a plain explanation; toast "Course set. Your choices are saved." Privacy title "Your data, / *in orbit*", terms title "Flight / *rules*". Policy and terms text: drafts for counsel review, governed by Texas law, liability cap US$100, analytics retention 14 months and contact messages up to two years (all to confirm).
 
 ## Project inventory
 

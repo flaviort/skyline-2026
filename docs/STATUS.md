@@ -1,6 +1,26 @@
 # Status
 
-Handoff note: where the project stands, what is next, and what is missing. Last updated 2026-10-05. Read this first in a new session, then `docs/PLAN.md`.
+Handoff note: where the project stands, what is next, and what is missing. Last updated 2026-10-07. Read this first in a new session, then `docs/PLAN.md`.
+
+## 2026-10-07: the whole site, built in one pass
+
+The user asked for "the rest of the website and all the other pages" at once (overriding the part-by-part gate for this round), creative over the old scope, with references researchdesignagency.com and igniteagency.com, the View Transitions API for page transitions, a spinning 3D logo, ScrollTrigger pins and Ignite-style testimonials. Everything below is **in review**.
+
+- **Projects exported** once from the old WordPress (`scripts/export-wordpress.mjs`): 6 cases, typed files in `src/content/projects/`, 99 MB of media in `public/images/work/<slug>/` (images capped at 2400px, videos re-encoded to H.264 with poster frames). No runtime WordPress.
+- **Route transitions (11b)** on the View Transitions API through React's `ViewTransition` (`PageShell`): the old screen tips back and dims into an orange field, the new page sweeps up from the bottom, menu and logo stay put, and a clicked project cover flies into the case study hero (`ProjectCover`, shared name `cover-<slug>`). React hides the root snapshot when only named boundaries change; `PageShell` cancels that hide. Entrances on the new page start from the sweep (`beginRouteChange`/`endRouteChange` in `src/lib/page-ready.ts`, wired by `RouteSync`). Browsers without the API swap instantly.
+- **Homepage** after Stats: client names marquee (stand-in for part 02 until the logo SVGs come), Recent work as a pinned deck of brand-colored cards (04), What we do pinned around a chrome 3D S with the three pillars (05), Kind words pile (testimonials), and the footer with the call to action and an orange 3D S (07, 08).
+- **Pages:** `/work` (index rows, cursor-following cover, service filters with Flip), `/work/[slug]` (hero, all 8 block types, next case), `/about` (office photo parallax, scroll-lit statements, stats, pinned horizontal services strip, capabilities deck download), `/services` (sticky pillar names filling orange, services with their cases), `/contact` (copy-to-clipboard email, form posting to `/api/contact`), `/faq` (accordion plus FAQPage data), 404 (Nova adrift).
+- **Contact form** sends through Resend's REST API (`src/lib/server/send-mail.ts`). Needs `RESEND_API_KEY` in Vercel (optional `CONTACT_TO`, `CONTACT_FROM` on a verified domain); without it the form answers 503 and shows the email address.
+- **Needs the user:** approve the new copy listed in `docs/CONTENT.md` (section "Site build, 2026-10-07"); confirm the two testimonials are real (they come from the old site's structured data only; "Skyler Crash" may be a placeholder name); privacy and terms text (no legal pages yet, so the footer links none); client logo SVGs; Resend key.
+- **Security:** the old site's repo (`../skyline-2023/assets/php/mailer.php`) has a SendGrid API key committed in git. It should be revoked.
+- **Not done in this pass:** Nova's goodbye in the footer (part 08 spec), a real-device check of the transitions in Safari and Firefox.
+
+## 2026-10-08: cookie banner and legal pages (in review)
+
+- **Banner** (`src/components/consent/cookie-consent.tsx`): floats in bottom left after the page entrance with a cookie drawn in code; choosing makes the cookie take one to three bites (more cookies accepted, more bites) before the card drops away. Buttons: Essentials only, Let me choose, Accept all. With Do Not Track or Global Privacy Control it says "Signal received" and offers Got it or Change settings.
+- **Preferences dialog** (native `<dialog>`, opens from the banner, the footer's "Cookie preferences" and the privacy page): Life support (essential, always on), Cabin settings (preferences), Telemetry (analytics), Transmissions (marketing), Radio silence (do not sell or share; switching it on turns marketing off and back). Escape or the backdrop closes without saving.
+- **Wiring:** `src/lib/consent.ts` stores the choice under `skyline-cookie-consent` (version 1), syncs across tabs and fires `cookie:consent`. `src/lib/consent-scripts.ts` loads Google Analytics (Consent Mode, denied by default) and the Meta Pixel only after a yes, and on a no flips GA to denied, revokes Meta and deletes `_ga` and `_fbp` cookies. Both need their IDs in Vercel: `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_META_PIXEL_ID`; without them nothing loads. Tested in headless Chrome with test IDs: nothing before a choice, both load on accept, cookies cleared on revoke.
+- **Pages:** `/privacy` and `/terms` (`src/content/legal.ts`, `LegalDocument` with a sticky table of contents). The text is a **draft written from what the site actually does**; Skyline's counsel must review it before launch. The privacy policy names Vercel, Resend or SendGrid, Google Analytics and Meta; update it if the providers change.
 
 ## Where we are
 
@@ -103,3 +123,25 @@ Then open `http://localhost:3000` (homepage) and `http://localhost:3000/lab` (co
 ```bash
 npm run model:nova
 ```
+
+## 2026-10-08: SEO pass
+
+Every page has one h1, a unique title and description, a canonical URL, Open Graph and Twitter tags with a share image (`src/app/opengraph-image.tsx`, generated; case studies use their cover), and JSON-LD: Organization plus ProfessionalService (address, geo, phone, socials) and WebSite on every page, BreadcrumbList on inner pages, AboutPage, ContactPage, CollectionPage with an ItemList of cases, CreativeWork per case study, an OfferCatalog of the seven services, FAQPage. `sitemap.xml` (14 URLs with case images) and `robots.txt` (blocks `/api/` and `/lab`) are generated. The 404 is noindex. One helper builds all of it: `src/lib/seo.ts` (`pageMetadata`, schema builders) with `JsonLd` in `src/components/seo/`. The testimonials are not in the schema until confirmed. To do when live: submit the sitemap in Google Search Console and check the rich results test.
+
+## 2026-10-08: quality pass (vitals, accessibility, HTML)
+
+Measured on a production build (`next build && next start`) with Lighthouse 12 (mobile is a throttled mid-range phone), axe-core 4 (WCAG 2.2 AA plus best practices, every page scrolled through at 1440 and 390 wide, plus the open cookie dialog) and html-validate (WHATWG rules; the W3C Nu checker needs Java, which this machine lacks).
+
+| | Desktop | Mobile |
+|---|---|---|
+| Performance | 99 to 100 | 85 to 96 |
+| Accessibility, best practices, SEO | 100 everywhere | 100 everywhere |
+| LCP | 0.6 to 0.8 s | 2.9 to 4.4 s |
+| CLS | 0 to 0.006 | 0 to 0.03 |
+| TBT | 0 to 20 ms | 10 to 380 ms |
+
+axe: zero violations on all 21 scans. HTML: zero errors on 11 pages.
+
+Fixed in this pass: three.js for the spinning S loads only when the mark nears the screen (mobile Work went from 61 to 90, blocking time from 1,640 ms to 20 ms); video posters go through the image optimizer (WebP, 137 KB to 54 KB); scroll-lit text no longer puts `aria-label` on a `<p>` and its dimmed words stay at 4.5:1 or better (dim 0.6 instead of 0.18); services pillar names at 40% instead of 22%; the logo sits in its own `nav` landmark; the case study facts list is a valid `<dl>`; legal table of contents links are 24px targets.
+
+Known trade-off: mobile LCP sits around 3 s (Google's "good" line is 2.5 s) because the launch intro covers the first paint and headings reveal after hydration (text starts hidden for the masked reveal). Options if field data from real users (Vercel Speed Insights, once enabled) says it matters: skip the intro on phones, or let the hero heading paint before its reveal.

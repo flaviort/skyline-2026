@@ -94,10 +94,18 @@ export function DrawLineLink({
     else target.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Files and other sites are plain anchors: no client navigation, other sites in a new tab.
+  const file = /\.[a-z0-9]{2,4}$/i.test(href);
+  const offsite = /^(https?:|mailto:|tel:)/.test(href);
+  const Anchor = file || offsite ? "a" : Link;
+
   return (
-    <Link
+    <Anchor
       ref={root}
       href={href}
+      target={offsite && href.startsWith("http") ? "_blank" : undefined}
+      rel={offsite && href.startsWith("http") ? "noreferrer" : undefined}
+      download={file || undefined}
       onClick={onClick}
       onMouseEnter={draw}
       onMouseLeave={erase}
@@ -126,6 +134,6 @@ export function DrawLineLink({
         </svg>
       </span>
       {chip && variant !== "menu" && <ArrowChip color={color} direction={chip} />}
-    </Link>
+    </Anchor>
   );
 }

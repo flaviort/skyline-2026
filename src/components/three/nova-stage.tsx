@@ -11,6 +11,7 @@ import { tilt as phoneTilt, tiltIsActive, trackTilt } from "@/lib/tilt";
 import { gsap } from "@/lib/gsap";
 import { whenPageReady } from "@/lib/page-ready";
 import { clamp } from "@/lib/utils";
+import { NOVA_COVER } from "@/lib/nova-landing";
 import { LIGHTS, createBeacon, createStudioScene, createSuitScene, dressNova } from "./nova-look";
 import { ARM_REST_LIFT, AXIS, captureRest, findBones, poseBone } from "./nova-rig";
 import { emptyTrickState, nextTrick, playTrick, settleTricks, type TrickName } from "./nova-tricks";
@@ -375,6 +376,16 @@ function Nova({
     const novaH = height;
     const novaW = novaH * 0.7;
 
+    // The light section after the about one slides over it: clip the canvas
+    // at its top edge, so Nova and the cast (which trail a fast scroll) never
+    // draw over it.
+    if (mode === "page") {
+      const cover = document.querySelector(NOVA_COVER);
+      const hidden = cover ? Math.round(clamp(rect.bottom - cover.getBoundingClientRect().top, 0, h)) : 0;
+      const clip = hidden > 0 ? `inset(0 0 ${hidden}px 0)` : "";
+      if (state.gl.domElement.style.clipPath !== clip) state.gl.domElement.style.clipPath = clip;
+    }
+
     // Margins cover his arm span and the turn sweep, so no limb leaves the screen.
     const bounds = {
       left: Math.max(novaW * 0.85, w * region[0]),
@@ -616,7 +627,9 @@ function Nova({
       const spotY = spot.top - rect.top + spot.height / 2;
       slotY = spotY;
       landX = spot.left - rect.left + spot.width / 2;
-      landY = Math.min(hold, spotY);
+      // A spot can lift him off its centre, in his landed heights (`data-nova-lift`).
+      const lift = Number((slot as HTMLElement).dataset.novaLift ?? 0) * novaH * LANDING_SIZE;
+      landY = Math.min(hold, spotY) - lift;
       const scrolled = Math.max(0, -banner.getBoundingClientRect().top);
       const total = scrolled + Math.max(0, spotY - hold);
       m.scrolled = THREE.MathUtils.damp(m.scrolled, scrolled, LANDING_LAG, dt);

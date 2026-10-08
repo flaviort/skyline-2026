@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import { Inter_Tight } from "next/font/google";
+import { CookieConsent } from "@/components/consent/cookie-consent";
 import { LaunchIntro } from "@/components/layout/launch-intro";
 import { Menu } from "@/components/layout/menu";
 import { Starfield } from "@/components/motion/starfield";
 import { DevCursors } from "@/components/providers/dev-cursors";
+import { RouteSync } from "@/components/providers/route-sync";
 import { SmoothScroll } from "@/components/providers/smooth-scroll";
+import { JsonLd } from "@/components/seo/json-ld";
+import { organizationSchema, SITE, websiteSchema } from "@/lib/seo";
 import "./globals.css";
 
 // The site's one typeface (decision Q24, sans only): the stand-in for the
@@ -22,18 +26,24 @@ const INTRO_SCRIPT = [
 ].join("");
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://theskylineagency.com"),
+  metadataBase: new URL(SITE.url),
   title: {
     default: "The Skyline Agency | Dallas Digital Marketing & Design",
     template: "%s | The Skyline Agency",
   },
-  description:
-    "The Skyline Agency is a Dallas digital agency for strategy, branding, web development, UX, digital marketing, SEO and media production.",
+  description: SITE.description,
+  applicationName: SITE.name,
+  authors: [{ name: SITE.legalName, url: SITE.url }],
+  creator: SITE.legalName,
+  publisher: SITE.legalName,
+  formatDetection: { telephone: false, email: false, address: false },
   openGraph: {
-    siteName: "The Skyline Agency",
-    locale: "en_US",
+    siteName: SITE.name,
+    locale: SITE.locale,
     type: "website",
   },
+  twitter: { card: "summary_large_image" },
+  robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 } },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -46,12 +56,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: INTRO_SCRIPT }} />
       </head>
       <body>
+        <JsonLd data={[organizationSchema, websiteSchema]} />
         <DevCursors />
         {/* Fixed stars behind every page; dark sections are transparent over them. */}
         <Starfield className="fixed inset-0 -z-10" />
         <SmoothScroll>
+          <RouteSync />
           <Menu />
           {children}
+          <CookieConsent />
           <LaunchIntro />
         </SmoothScroll>
       </body>

@@ -54,3 +54,6 @@ wp-vet/
 
 # review screenshots from impeccable checks (regenerated on demand)
 /.impeccable/review/
+
+# Screenshots and other scratch output from review sessions
+/_temp/

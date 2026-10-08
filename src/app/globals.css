@@ -32,6 +32,9 @@
   --color-lilac: #c8b6ff;
   /* The alien in the space journey (part 01b); the 3D scene uses the same hex. */
   --color-alien: #7bd94a;
+  /* The cookie in the cookie banner: dough and chocolate chips. */
+  --color-cookie: #d9a066;
+  --color-chip: #4a2a17;
   --color-transparent: transparent;
   --color-current: currentColor;
 
@@ -648,4 +651,147 @@ html.intro-lock {
 }
 :root[data-nova="still"] .nova-still {
   display: block;
+}
+
+/* ------------------------------------------------------------------
+   Route transitions (part 11b), on the browser's View Transitions API
+   through React's ViewTransition (PageShell). The old screen, a snapshot
+   of the whole viewport, shrinks back and dims into an orange field, the
+   color of the launch intro; the new page sweeps up over it from the
+   bottom edge. The menu and logo stay put on top. The new page snapshot
+   is as tall as the page, so its sweep is measured in viewport units.
+   ------------------------------------------------------------------ */
+
+::view-transition {
+  pointer-events: none;
+}
+
+::view-transition-image-pair(root) {
+  background-color: var(--color-orange);
+}
+
+::view-transition-old(root) {
+  animation: route-out 0.9s var(--ease-move) both;
+  transform-origin: 50% 50%;
+}
+
+/* The new root holds only the stars and the body: the page itself has its
+   own group. It stays hidden; the real one takes over when the sweep ends. */
+::view-transition-new(root) {
+  animation: none;
+  opacity: 0;
+}
+
+::view-transition-group(.page-in) {
+  animation: none;
+  z-index: 10;
+}
+
+::view-transition-new(.page-in) {
+  background-color: var(--color-ink);
+  animation: route-in 1s var(--ease-move) 0.12s both;
+}
+
+::view-transition-group(site-header),
+::view-transition-group(site-logo),
+::view-transition-group(cookie-banner) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-old(site-header),
+::view-transition-old(site-logo),
+::view-transition-old(cookie-banner) {
+  display: none;
+}
+::view-transition-new(site-header),
+::view-transition-new(site-logo),
+::view-transition-new(cookie-banner) {
+  animation: none;
+}
+
+/* Shared covers (work list to case study) fly above the sweep. */
+::view-transition-group(.cover) {
+  z-index: 20;
+  animation-duration: 0.9s;
+  animation-timing-function: var(--ease-move);
+}
+
+@keyframes route-out {
+  to {
+    scale: 0.9;
+    translate: 0 -4vh;
+    rotate: -1.5deg;
+    border-radius: 2rem;
+    filter: brightness(0.45);
+  }
+}
+
+@keyframes route-in {
+  from {
+    clip-path: inset(100vh 0 0 0);
+    translate: 0 12vh;
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+    translate: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Cookie preferences dialog: the page dims and blurs behind it.
+   ------------------------------------------------------------------ */
+
+.cookie-dialog::backdrop {
+  background-color: color-mix(in srgb, var(--color-void) 70%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+/* ------------------------------------------------------------------
+   Legal pages: long-form text on the type scale.
+   ------------------------------------------------------------------ */
+
+@layer components {
+  .legal-prose {
+    max-width: 68ch;
+  }
+  .legal-prose p,
+  .legal-prose li {
+    font-size: max(var(--para-m), 16px);
+    line-height: 1.6;
+    letter-spacing: -0.02em;
+    color: var(--theme-mute);
+  }
+  .legal-prose p + p,
+  .legal-prose p + ul,
+  .legal-prose ul + p,
+  .legal-prose * + .legal-prose__action {
+    margin-top: 1.2em;
+  }
+  .legal-prose ul {
+    display: grid;
+    gap: 0.7em;
+    margin-top: 1em;
+  }
+  .legal-prose li {
+    position: relative;
+    padding-left: 1.6em;
+  }
+  .legal-prose li::before {
+    content: "";
+    position: absolute;
+    top: 0.62em;
+    left: 0.2em;
+    width: 0.45em;
+    height: 0.45em;
+    background-color: var(--color-orange);
+  }
 }

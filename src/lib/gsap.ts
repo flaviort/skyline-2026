@@ -3,6 +3,8 @@
 import { gsap } from "gsap";
 import { CustomEase } from "gsap/CustomEase";
 import { DrawSVGPlugin } from "gsap/DrawSVGPlugin";
+import { Draggable } from "gsap/Draggable";
+import { Flip } from "gsap/Flip";
 import { InertiaPlugin } from "gsap/InertiaPlugin";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "gsap/SplitText";
@@ -11,7 +13,7 @@ import { useGSAP } from "@gsap/react";
 // Register once per client bundle. Import gsap from here, never from "gsap" directly,
 // so every component gets the plugins and the named eases.
 if (typeof window !== "undefined") {
-  gsap.registerPlugin(useGSAP, CustomEase, DrawSVGPlugin, InertiaPlugin, ScrollTrigger, SplitText);
+  gsap.registerPlugin(useGSAP, CustomEase, Draggable, DrawSVGPlugin, Flip, InertiaPlugin, ScrollTrigger, SplitText);
 
   // Named eases taken from the reference build. "osmo" is the house ease for
   // reveals and UI; "move" is for larger travel (cards, panels, page transitions).
@@ -21,4 +23,4 @@ if (typeof window !== "undefined") {
   gsap.defaults({ ease: "osmo", duration: 1 });
 }
 
-export { gsap, CustomEase, DrawSVGPlugin, InertiaPlugin, ScrollTrigger, SplitText, useGSAP };
+export { gsap, CustomEase, Draggable, DrawSVGPlugin, Flip, InertiaPlugin, ScrollTrigger, SplitText, useGSAP };

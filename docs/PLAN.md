@@ -43,16 +43,16 @@ Homepage, one part at a time. Status: `todo`, `spec` (written, waiting for appro
 |---|---|---|---|
 | 1 | [Banner](specs/home/01-banner.md) | Hero: serif lead, headline, Discover more link, 3D Nova floating around and following the mouse | review |
 | 1b | [About, Nova lands](specs/home/01b-about.md) | Old site's About copy, centered; Nova frontflips to the middle of the screen on scroll and lands on the heading (added 2026-10-05); round 2 adds a scroll-driven space journey before the landing | review |
-| 2 | [Logos](specs/home/02-logos.md) | Client logo marquee under the banner, scroll-direction speed | spec |
+| 2 | [Logos](specs/home/02-logos.md) | Client logo marquee under the banner, scroll-direction speed | review (names in type until the SVGs arrive) |
 | 3 | [Agency / about](specs/home/03-agency.md) | Office photo collage and the agency story, "More about us" | spec |
-| 4 | [Recent projects](specs/home/04-recent-projects.md) | Dark band, pinned stack of framed project cards from the 6 real cases, rotating badge | spec |
-| 5 | [What we do](specs/home/05-what-we-do.md) | Three tilted service cards (Strategy, Design, Growth) | spec |
+| 4 | [Recent projects](specs/home/04-recent-projects.md) | Dark band, pinned stack of framed project cards from the 6 real cases, rotating badge | review |
+| 5 | [What we do](specs/home/05-what-we-do.md) | Built as three pinned pillars around a spinning chrome S (2026-10-07) | review |
 | 6 | [Brands we've launched](specs/home/06-brands-launched.md) | Scattered parallax collage of client work with hand-lettered client names; grows into "Nova was here" | spec |
-| 7 | [Contact CTA](specs/home/07-contact-cta.md) | "Ready for liftoff?" block with stickers trailing the mouse | spec |
-| 8 | [Footer](specs/home/08-footer.md) | Wordmark, navigation, contact, socials, bottom bar, scroll to top, Nova's goodbye wave | spec |
+| 7 | [Contact CTA](specs/home/07-contact-cta.md) | "Ready for liftoff?" in the footer, next to a spinning orange 3D S | review |
+| 8 | [Footer](specs/home/08-footer.md) | Navigation, contact, socials, bases marquee, live clock, back to top (Nova's goodbye still to do) | review |
 | 9 | [Menu](specs/home/09-menu.md) | Fixed nav: logo, pill links, Contact button, custom cursors (D5); pulled ahead of 02 to 08 on 2026-10-02 | review |
 | 10 | [Mobile](specs/home/10-mobile.md) | Full pass of parts 1 to 9 below 992px, mobile menu | spec |
-| 11 | [Page transitions](specs/home/11-page-transitions.md) | 11a launch intro on every full load (pulled forward 2026-10-05); 11b route transitions, on hold | 11a review, 11b spec |
+| 11 | [Page transitions](specs/home/11-page-transitions.md) | 11a launch intro on every full load; 11b route transitions on the View Transitions API (2026-10-07) | review |
 
 Then `DESIGN.md` is written from the finished homepage and the homepage gets a final review before internal pages start.
 
@@ -94,7 +94,7 @@ Mobile is its own part (10), so parts 1 to 9 only need to not break below 992px 
 
 ## Internal pages
 
-Same loop, same per-part approval. Each page is broken into parts when its spec is written.
+All built in one pass on 2026-10-07 at the user's request (see `docs/STATUS.md`); each is in review. Same loop, same per-part approval for changes from here. Each page is broken into parts when its spec is written.
 
 | Page | Route | Spec | Notes |
 |---|---|---|---|

@@ -3,46 +3,60 @@
 import Image from "next/image";
 import { useRef } from "react";
 import { Section } from "@/components/layout/section";
-import { useKineticText } from "@/components/motion/use-kinetic-text";
+import { useScrollAway } from "@/components/motion/use-scroll-away";
+import { useScrollLight } from "@/components/motion/use-scroll-light";
 import { Eyebrow } from "@/components/type/eyebrow";
-import { Heading } from "@/components/type/heading";
-import { PillButton } from "@/components/ui/pill-button";
+import { DrawLineLink } from "@/components/ui/draw-line-link";
 import { about } from "@/content/home";
 
+/** How far Nova stands above the centre of his line, in his landed heights (the still image matches: 0.3) */
+const NOVA_LIFT = 0.3;
+
 /**
- * Part 01b: the old site's About block, centered. Nova frontflips out of the
- * banner and lands on the empty spot above the heading (the stage finds it
- * by NOVA_LANDING in src/lib/nova-landing.ts); the spot's parent is the block that ends up centered on
- * screen when he lands. Without the 3D Nova the spot shows his still image.
+ * Part 01b: one big left-aligned statement across the width (round 3, layout
+ * A). Nova frontflips out of the banner and lands in a gap inside the
+ * sentence: the spot (NOVA_LANDING in src/lib/nova-landing.ts) is one line
+ * tall, so the lines keep an even rhythm, and he is taller than the line. The
+ * section sits above his canvas (z 41 over 40), so the lines above and below
+ * pass in front of him: he stands among the words. The words light up as the
+ * statement scrolls through; as the section leaves, the light section after
+ * it slides over (useScrollAway). Without the 3D Nova the spot shows his still
+ * image at the same size.
  */
 export function About() {
-  const body = useRef<HTMLParagraphElement>(null);
-  useKineticText(body, { reveal: { split: "lines", scroll: true, delay: 0.15 } });
+  const content = useRef<HTMLDivElement>(null);
+  const text = useRef<HTMLParagraphElement>(null);
+  useScrollAway(content);
+  useScrollLight(text);
 
   return (
-    <Section id="about" className="px-page flex min-h-svh flex-col items-center justify-center pt-[8rem] pb-[14rem] text-center">
-      <div className="flex w-full flex-col items-center">
-        {/* Sized from his landed height (LANDING_SIZE) plus room for his float. */}
-        <div data-nova-landing aria-hidden className="relative h-[calc(var(--nova-h,30rem)*0.6*1.1)] w-[calc(var(--nova-h,30rem)*0.45)]">
-          <Image
-            src="/images/legacy/nova.png"
-            alt=""
-            width={932}
-            height={1289}
-            className="nova-still absolute inset-x-0 bottom-[4%] mx-auto h-[92%] w-auto"
-          />
-        </div>
-        <Eyebrow className="mt-[1rem]">{about.eyebrow}</Eyebrow>
-        <Heading as="h2" size="xxl" weightHover reveal={{ split: "chars", scroll: true }} lines={[{ text: about.heading }]} className="mt-[1.2rem]" />
-        <p
-          ref={body}
-          data-reveal=""
-          className="mt-[2.4rem] max-w-[65rem] text-[max(2.5rem,20px)] leading-[1.3] font-normal tracking-[-0.03em] text-balance"
-        >
-          {about.body.before} <strong className="font-bold">{about.body.strong}</strong>
-          {about.body.after}
+    <Section id="about" className="px-page relative z-[41] flex min-h-svh flex-col justify-center overflow-clip pt-[8rem] pb-[14rem]">
+      <div ref={content}>
+        <Eyebrow>{about.eyebrow}</Eyebrow>
+        <h2 className="sr-only">{about.eyebrow}</h2>
+        <p ref={text} className="mt-[3.2rem] text-(length:--heading-m) leading-[1.02] font-medium tracking-[-0.045em] max-md:text-(length:--heading-s)">
+          {about.statement.before}{" "}
+          {/* One line tall. He is drawn at LANDING_SIZE of his height and lifted by
+              NOVA_LIFT of it, so he stands on this line with his boots just behind the next. */}
+          <span
+            data-nova-landing
+            data-nova-lift={NOVA_LIFT}
+            aria-hidden
+            className="relative mx-[0.1em] inline-block h-[1em] w-[calc(var(--nova-h,30rem)*0.45)] align-middle"
+          >
+            <Image
+              src="/images/legacy/nova.png"
+              alt=""
+              width={932}
+              height={1289}
+              className="nova-still absolute top-1/2 left-1/2 h-[calc(var(--nova-h,30rem)*0.6)] w-auto max-w-none -translate-x-1/2 translate-y-[calc(-50%-var(--nova-h,30rem)*0.6*0.3)]"
+            />
+          </span>{" "}
+          {about.statement.after}
         </p>
-        <PillButton href={about.button.href} label={about.button.label} tone="orange" size="l" className="mt-[3.6rem]" />
+        <div className="mt-[5rem] flex justify-end">
+          <DrawLineLink href={about.link.href} label={about.link.label} className="para-xl font-medium" />
+        </div>
       </div>
     </Section>
   );

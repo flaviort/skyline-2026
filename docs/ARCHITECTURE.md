@@ -13,7 +13,7 @@ How the codebase is organized and the rules every change follows. Read with `AGE
 | Smooth scroll | Lenis via `lenis/react` | 1.3 |
 | 3D | three.js 0.186 through React Three Fiber 9 (`useLoader` with three's own `GLTFLoader` and Meshopt decoder; no drei). Models optimized with `gltf-transform` (`npm run model:nova`). Loaded lazily, only on pages that render Nova. | added in part 01 |
 | Fonts | `next/font/google`, self-hosted at build: Inter Tight only (variable weight 100 to 900; D15) | |
-| Page transitions | Launch intro on every full load (`LaunchIntro`, part 11a). Every entrance plays from one cue, `whenPageReady()` in `src/lib/page-ready.ts`, fired by whichever cover is leaving. Route transitions (11b) are still to be defined and must fire the same cue | |
+| Page transitions | Launch intro on every full load (`LaunchIntro`, part 11a). Route changes on the View Transitions API through React's `ViewTransition` in `PageShell` (11b; CSS under "Route transitions" in `globals.css`). Every entrance plays from one cue, `whenPageReady()` in `src/lib/page-ready.ts`: the intro fires it on a full load, the sweep (`endRouteChange`) on a route change, started by `RouteSync` on internal link clicks | |
 
 All GSAP plugins are free since 3.13, so nothing here needs a club license.
 
@@ -144,7 +144,10 @@ Built or extended part by part; the "First needed" column follows the build orde
 | `Starfield` | `className` | 1 Banner (F) | fixed behind every page from the root layout; scroll-reactive stars from the old site on one 2D canvas (constant drift, scroll adds lagged speed, wraps on long pages) |
 | `BlockReveal`, `BlockMarks`, `blockReveal()` | `BlockReveal`: `children`, `className`. `blockReveal(box, text?)` returns a timeline | 11a Intro | banner headline lines, `WordSwap` (`reveal="block"`); any line that should arrive through the bar and orange block |
 | `usePageEntrance` (hook) | `build(timeline)`, `scope`, `offset` (seconds relative to the cover being gone) | 11a Intro | banner, menu, starfield; every page's entrance. Builds paused under the cover, plays on the page cue; layout components only play after the first load |
+| `useScrollLight` (hook) | `text` ref, `dim` (0.18) | 1b About | big statements: words light up one by one, scrubbed to the scroll; full strength with reduced motion |
+| `useScrollAway` (hook) | `content` ref (its parent is the section, which must `overflow-clip`), `lag` (0.35) | 1b About | any section the next one should slide over: the content sinks back by `lag` of the scroll as the section leaves (good-fella.com's hero, measured), off with reduced motion |
 | `useFitText` (hook) | `unit` (`word`, `line`), `min` (0.4), `room` (0.96) | 1 Banner | every `Heading` (word fit, on by default) and `Lead` (line fit) |
+| `StatCard` | `value`, `suffix` (orange), `label`, `detail`, `className` | 1c Stats | any figure on a paper card; static markup, the parent section runs the staggered open and count-up |
 | `Lettering` | `svg`, `color`, `position` | 6 Brands | about page, stickers |
 | `Prose` | rich text from content | Legal pages | project text blocks |
 
@@ -221,6 +224,10 @@ Pointer followers share one pointer source: `NovaLayer` moves a 3D Nova around t
 | `ScatterLayout` | `items`, `positions`, `itemSize` | 6 Brands | about page |
 | `StickySteps` | `steps`, `panel` (sticky media, color) | Project page | services page |
 | `SwipeRow` | `snap`, `peek` | 10 Mobile | galleries |
+
+**Built 2026-10-07** (the whole-site pass): `PageShell` (every page: view transition, footer), `RouteSync`, `Footer`, `PageHero`, `Statement`, `Testimonials`, `SpinningLogo` (`finish`: orange, chrome, paper; drag to throw, scroll spins it), `Badge`, `Marquee`, `Reveal`, `Media`, `Accordion`, `Wordmark`, `ProjectCard`, `ProjectCover` (shared view transition name), `ProjectBlocks` (all 8 exported block types), `WorkIndex`, `ContactForm`, `CopyEmail`. `DrawLineLink` renders a plain anchor for files and other sites. Every page wraps its `main` in `PageShell`.
+
+**SEO:** every page exports `pageMetadata({ title, description, path })` from `src/lib/seo.ts` (canonical, Open Graph, Twitter) and renders its structured data with `<JsonLd data={...} />` using the schema builders there. A new page needs both.
 
 **Hooks** (`src/lib/hooks/`): `usePointer` (one shared pointer tracker), `useReducedMotion`, `useFinePointer`, `usePageReady` (fires when the page transition finishes), `useLenis` (from `lenis/react`).
 

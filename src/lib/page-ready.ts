@@ -39,3 +39,28 @@ export function signalPageReady(cue: PageCue = { clearIn: 0 }) {
 export function resetPageReady() {
   if (!current || current.done) current = pending();
 }
+
+// Route changes (part 11b). A click on an internal link (or the browser's
+// back and forward) starts one: the next page's entrances wait for a fresh
+// cue, which the page transition fires as the new page sweeps in. A change
+// that never finishes (same page, a hash link) clears itself.
+
+let routeChange: number | null = null;
+
+/** Called when navigation to another page starts. */
+export function beginRouteChange() {
+  if (typeof window === "undefined") return;
+  resetPageReady();
+  if (routeChange !== null) window.clearTimeout(routeChange);
+  routeChange = window.setTimeout(() => endRouteChange(), 2500);
+}
+
+/** Called by the page transition as the new page arrives. */
+export function endRouteChange(cue: PageCue = { clearIn: 0 }) {
+  if (routeChange === null) return;
+  window.clearTimeout(routeChange);
+  routeChange = null;
+  signalPageReady(cue);
+}
+
+export const inRouteChange = () => routeChange !== null;

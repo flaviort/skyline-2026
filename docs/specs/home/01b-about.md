@@ -207,3 +207,18 @@ Lab: the about section with Nova on its own page-mode canvas, plus a "frontflip"
 - [ ] No duplicated markup or logic that belongs in a library component
 - [ ] Impeccable detector clean, or findings accepted with a reason
 - [ ] Approved by the user
+
+## Leaving the about section (2026-10-06, user)
+
+Everything down to the about section and its button stays dark. After it the page turns light, the way good-fella.com's hero hands over to its first light section: the next section (light theme) scrolls up normally and slides over the about section, whose content sinks back by 0.35px per px scrolled (measured on good-fella.com: linear, no fade, the section clips). Starts when the about section's bottom meets the bottom of the screen. Hook: `useScrollAway` in `src/components/motion/use-scroll-away.ts`. The part 03 stand-in is the light section for now; part 03 takes its place.
+
+An earlier attempt the same day (the whole ground fading to light as Nova landed, stars fading out) was dropped by the user.
+
+## Round 3, statement layout (2026-10-06, user picked draft A of three)
+
+The centered block with the orange button was "too simple". Three drafts were built live and compared (statement, two-tier split, mission log); the user chose the statement, and the others were removed.
+
+- One big left-aligned sentence across the width (`--heading-m`, weight 500, leading 1.02; `--heading-s` on phones), eyebrow above, squiggle `DrawLineLink` "Get to know us" bottom right instead of the orange button.
+- Nova lands in a gap inside the first line. The gap is one line tall, so every line keeps the same spacing (user: the first gap was much bigger than the rest). He is taller than a line and stands on it: the spot carries `data-nova-lift="0.3"` (his landed heights), which the stage subtracts from the landing Y. The section sits above his canvas (z 41 over 40), so the line below passes in front of his boots. Not lower than that: off-white text over his white suit gets hard to read.
+- Words light up from 18% to full as the statement scrolls through (`useScrollLight`, scrubbed, `top 80%` to `bottom 55%`).
+- New copy, waiting for approval in `docs/CONTENT.md`.

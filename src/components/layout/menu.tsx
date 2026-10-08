@@ -43,16 +43,20 @@ export function Menu() {
           inverts against whatever is under it (white on the dark ground, dark
           over light bands or Nova). Inside the header it could only blend
           with the header itself, which is empty. */}
-      <Link
-        href="/"
-        aria-label="The Skyline Agency, home"
-        data-menu-enter
-        className="fixed top-[1rem] left-(--page-padding) z-50 mt-[0.5rem] text-paper mix-blend-difference"
-      >
-        <LogoMark className="h-[3.5rem] w-auto" />
-      </Link>
+      {/* Its own landmark: the logo sits outside the header so its blend can see the page. */}
+      <nav aria-label="Home">
+        <Link
+          href="/"
+          aria-label="The Skyline Agency, home"
+          data-menu-enter
+          style={{ viewTransitionName: "site-logo" }}
+          className="fixed top-[1rem] left-(--page-padding) z-50 mt-[0.5rem] text-paper mix-blend-difference"
+        >
+          <LogoMark className="h-[3.5rem] w-auto" />
+        </Link>
+      </nav>
 
-      <header data-menu-enter className="pointer-events-none fixed inset-x-0 top-0 z-50 flex h-[5.35rem] items-start justify-between px-page pt-[1rem]">
+      <header data-menu-enter style={{ viewTransitionName: "site-header" }} className="pointer-events-none fixed inset-x-0 top-0 z-50 flex h-[5.35rem] items-start justify-between px-page pt-[1rem]">
         {/* Keeps the bar's layout: the logo itself is drawn above. */}
         <span aria-hidden className="h-[3.5rem] w-[3.9rem]" />
 

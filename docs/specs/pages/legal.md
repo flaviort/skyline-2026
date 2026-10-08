@@ -1,6 +1,6 @@
 # Pages: Privacy (`/privacy`), Terms (`/terms`) and the cookie banner
 
-Status: spec
+Status: review (built 2026-10-08; copy reworked in a playful voice at the user's request, see docs/CONTENT.md)
 Approved by / date:
 
 ## Reference
