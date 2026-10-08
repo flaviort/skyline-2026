@@ -35,7 +35,7 @@ export function LostNova() {
   return (
     <div ref={root} aria-hidden className="pointer-events-none">
       <div ref={body}>
-        <Image src="/images/legacy/nova.png" alt="" width={932} height={1289} priority className="h-[44svh] w-auto max-md:h-[30svh]" />
+        <Image src="/images/legacy/nova.png" alt="" width={932} height={1289} preload className="h-[44svh] w-auto max-md:h-[30svh]" />
       </div>
     </div>
   );

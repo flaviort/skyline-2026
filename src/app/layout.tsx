@@ -8,6 +8,7 @@ import { DevCursors } from "@/components/providers/dev-cursors";
 import { RouteSync } from "@/components/providers/route-sync";
 import { SmoothScroll } from "@/components/providers/smooth-scroll";
 import { JsonLd } from "@/components/seo/json-ld";
+import { LITE_QUERY } from "@/lib/lite";
 import { organizationSchema, SITE, websiteSchema } from "@/lib/seo";
 import "./globals.css";
 
@@ -17,12 +18,12 @@ import "./globals.css";
 const interTight = Inter_Tight({
   variable: "--font-inter-tight",
   subsets: ["latin"],
-  style: ["normal", "italic"],
 });
 
 const INTRO_SCRIPT = [
   "var c=document.documentElement.classList;c.add('js');",
-  "if(!matchMedia('(prefers-reduced-motion: reduce)').matches){c.add('intro','intro-lock');history.scrollRestoration='manual'}",
+  `var lite=matchMedia('${LITE_QUERY}').matches;if(lite)c.add('lite');`,
+  "if(!lite&&!matchMedia('(prefers-reduced-motion: reduce)').matches){c.add('intro','intro-lock');history.scrollRestoration='manual'}",
 ].join("");
 
 export const metadata: Metadata = {
@@ -51,8 +52,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={interTight.variable} suppressHydrationWarning>
       <head>
         {/* Before first paint: marks JavaScript as available so reveal targets can
-            start hidden, and, unless reduced motion is on, shows the launch intro
-            (part 11a) and locks scroll for it. A reload starts at the top. */}
+            start hidden, and, unless reduced motion is on or this is a phone
+            (the lite start, src/lib/lite.ts), shows the launch intro (part 11a)
+            and locks scroll for it. A reload starts at the top. */}
         <script dangerouslySetInnerHTML={{ __html: INTRO_SCRIPT }} />
       </head>
       <body>

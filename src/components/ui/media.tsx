@@ -40,6 +40,9 @@ export function Media({ media, alt = "", sizes = "100vw", fill = false, priority
 
   const fit = fill ? "absolute inset-0 h-full w-full object-cover" : "h-auto w-full";
 
+  // Next 16: `preload` replaces `priority`; the hero image also asks for high fetch priority.
+  const eager = priority ? ({ preload: true, loading: "eager", fetchPriority: "high" } as const) : {};
+
   if (media.type === "video") {
     return (
       <video
@@ -60,8 +63,8 @@ export function Media({ media, alt = "", sizes = "100vw", fill = false, priority
   }
 
   return fill ? (
-    <Image src={media.src} alt={alt} fill sizes={sizes} priority={priority} className={cn("object-cover", className)} />
+    <Image src={media.src} alt={alt} fill sizes={sizes} {...eager} className={cn("object-cover", className)} />
   ) : (
-    <Image src={media.src} alt={alt} width={media.width} height={media.height} sizes={sizes} priority={priority} className={cn(fit, className)} />
+    <Image src={media.src} alt={alt} width={media.width} height={media.height} sizes={sizes} {...eager} className={cn(fit, className)} />
   );
 }

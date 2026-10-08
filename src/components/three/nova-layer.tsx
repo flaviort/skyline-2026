@@ -157,7 +157,6 @@ export function NovaLayer({ scrollOutSelector = "#banner", landingSelector }: No
         height={1289}
         className="pointer-events-none absolute right-[8vw] top-[28svh] w-auto"
         style={{ height: metrics.height }}
-        priority={false}
       />
     );
   }

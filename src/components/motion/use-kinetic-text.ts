@@ -3,6 +3,7 @@
 import { useRef, type RefObject } from "react";
 import { gsap, ScrollTrigger, SplitText, useGSAP } from "@/lib/gsap";
 import { pointer, trackPointer } from "@/lib/pointer";
+import { isLite } from "@/lib/lite";
 import { whenPageReady } from "@/lib/page-ready";
 
 export type RevealOptions = {
@@ -78,7 +79,8 @@ export function useKineticText<T extends HTMLElement>(
           const { motion, fine } = context.conditions as { motion: boolean; fine: boolean };
           const show = () => root.setAttribute("data-revealed", "");
 
-          if (!motion) {
+          // Reduced motion, or a phone's on-load text (the lite start): no reveal.
+          if (!motion || (isLite() && !(reveal && reveal.scroll))) {
             show();
             return;
           }

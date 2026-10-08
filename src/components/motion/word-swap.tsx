@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { gsap, useGSAP } from "@/lib/gsap";
+import { isLite } from "@/lib/lite";
 import { whenPageReady } from "@/lib/page-ready";
 import { BlockMarks, blockReveal } from "./block-reveal";
 import { cn } from "@/lib/utils";
@@ -114,7 +115,10 @@ export function WordSwap({ words, hold = 2.6, delay = 0.3, firstHold = hold, rev
           }
 
           let intro: gsap.core.Timeline;
-          if (reveal === "block") {
+          if (isLite()) {
+            // Phones: the first word is simply there; the swapping starts on cue.
+            intro = gsap.timeline({ paused: true, onComplete: countdown });
+          } else if (reveal === "block") {
             gsap.set(chars(0), { "--wght": HEAVY });
             intro = blockReveal(layers[0], chars(0)).pause();
             intro.eventCallback("onComplete", countdown);

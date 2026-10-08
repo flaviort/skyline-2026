@@ -216,7 +216,8 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .js [data-reveal]:not([data-revealed]) {
+  /* Phones (`lite`) skip on-load reveals, so their text is never hidden. */
+  .js:not(.lite) [data-reveal]:not([data-revealed]) {
     visibility: hidden;
     animation: reveal-failsafe 0s 2.5s forwards;
   }

@@ -2,6 +2,7 @@
 
 import type { RefObject } from "react";
 import { gsap, useGSAP } from "@/lib/gsap";
+import { isLite } from "@/lib/lite";
 import { whenPageReady } from "@/lib/page-ready";
 
 type PageEntranceOptions = {
@@ -24,6 +25,8 @@ type PageEntranceOptions = {
 export function usePageEntrance(build: (timeline: gsap.core.Timeline) => void, { scope, offset = 0 }: PageEntranceOptions = {}) {
   useGSAP(
     () => {
+      // Phones skip entrances: everything is already in its final state.
+      if (isLite()) return;
       const mm = gsap.matchMedia();
       mm.add("(prefers-reduced-motion: no-preference)", () => {
         const timeline = gsap.timeline({ paused: true });
